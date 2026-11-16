@@ -42,7 +42,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 
 ## Progress
 
-- [ ] 1. Repository, problem and scope (this README)
+- [x] 1. Repository, problem and scope (this README)
 - [ ] 2. Submit the repository
 - [ ] 3. Tools report (every tool tested for real)
 - [ ] 4. SoW
