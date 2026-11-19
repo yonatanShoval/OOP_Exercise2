@@ -80,6 +80,57 @@ From the official Firebase pricing page (https://firebase.google.com/pricing), S
 
 Firebase covers real time, sending after the network returns, and hosting the page with one free platform. Python reads the same data in real time through the Admin SDK, so the system's logic can be written in Python while the phone page stays thin HTML/JS.
 
+## 2. Check-in: rotating QR code
+
+### Tools
+
+| Tool | Version | Role |
+|---|---|---|
+| `qrcode` for Python, with Pillow | `qrcode` 8.2, Pillow 13.0.0 | Creates the QR image |
+| tkinter | 8.6 (comes with Python) | Shows the code in a window on the computer |
+| Firebase Hosting | | The check-in page that the phone opens |
+
+Test code:
+- `tools-tests/02-checkin/python/rotating_qr.py`: creates and rotates the code
+- `tools-tests/01-infrastructure/public/checkin.html`: the check-in page
+
+Live page: https://oop-exercise2.web.app/checkin.html
+
+### Setup
+
+- Every 10 seconds the script creates a new random token, builds a link to the check-in page with the token, and shows the link as a QR code. The token contains no personal information.
+- The check-in page only shows the token from the link and the time it was opened. It does not save anything. Saving and validating check-ins will be designed in the SRS.
+- 10 seconds is a test value. The final value will be decided in the SRS.
+
+### Results
+
+Phone: iPhone, built-in camera app, cellular network with Wi-Fi off.
+
+| # | Test | Result |
+|---|---|---|
+| 1 | The iPhone camera scans the code and opens the check-in page | **Pass.** The code on the phone matched the code on the screen and in the terminal (checked by eye, the codes were not recorded). |
+| 2 | The code changes | **Pass.** After a change, a second scan gave a different code, matching the new code on the screen. |
+| 3 | Scan time | **Pass, not measured exactly.** Every scan finished before the code changed, so in less than 10 seconds. |
+| 4 | Distance | **Pass** from 1, 3 and 5 meters, from a laptop screen. |
+
+### Timing of the rotation
+
+- In one run, the terminal log showed 33 changes from 21:28:19 to 21:33:53: 334 seconds, 10.12 seconds on average.
+- The cause: `root.after(1000, ...)` waits one second after each tick's work is done, so small delays add up.
+- The average is the evidence for this drift. The log shows whole seconds only, so the single gaps of 11 seconds are partly rounding.
+- In a real system, a code's validity must be checked by the server's time, not by the window's timer.
+
+### Limitations
+
+- Tested on a laptop screen, not on a classroom projector.
+- Only iPhone with the built-in camera app was tested. Android was not tested.
+- Scan time was not measured exactly.
+- A rotating code makes copying harder but does not prevent it: a video call or a forwarded link can bypass it. It will be combined with the head count from the class photo, and in a real system with a login for each student.
+
+### Conclusion
+
+The Python `qrcode` library creates codes that the iPhone camera reads in less than 10 seconds from up to 5 meters on a laptop screen, with no app to install. The rotation works, but the timing of a code must not depend on the window's timer.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
@@ -88,9 +139,11 @@ What worked well:
 - It proposed a plan and showed every change before saving it.
 - It checked that the JS SDK version exists on the CDN and contains the functions the code uses, before using it.
 - It checked with `git check-ignore` that the secret key folder is blocked before the key was downloaded.
+- It checked how the `qrcode` image connects to tkinter before writing the code.
 
 What did not work well:
 - In step 1 it wrote facts about the class that were not in the assignment (an estimated number of students). I caught and removed them.
 - In the first draft of `app.js` it used an old version of the JS SDK, 10.12.2. I asked it to check the latest version.
 - It wrote in the code that pending messages survive "a page refresh" without testing it, and planned a refresh test without noticing that the page does not load without a network. The test was redesigned before it was run.
 - It did not anticipate that the iPhone turns Wi-Fi back on automatically. I found it, and the tests were repeated.
+- It did not anticipate that the window's timer drifts. The drift was found in the terminal log during testing.

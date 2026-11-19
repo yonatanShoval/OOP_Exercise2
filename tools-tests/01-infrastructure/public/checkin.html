@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check-in Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    .code { font-size: 32px; font-weight: bold; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h1>Check-in Test</h1>
+  <p>Code from the QR: <span class="code" id="code"></span></p>
+  <p>Opened at: <b id="time"></b></p>
+  <p>This test page only shows the code. It does not save anything.</p>
+  <script>
+    const code = new URLSearchParams(location.search).get("t");
+    document.getElementById("code").textContent = code || "(no code)";
+    document.getElementById("time").textContent = new Date().toLocaleTimeString();
+  </script>
+</body>
+</html>
