@@ -1,2 +1,15 @@
 # Course materials from the lecturer (contain student photos, never commit)
 course-materials/
+
+# Secret keys (Firebase service account), never commit
+secrets/
+
+# Python virtual environment and cache
+.venv/
+__pycache__/
+
+# Firebase CLI local cache
+.firebase/
+
+# Private notes for the defense, never commit
+private-notes/

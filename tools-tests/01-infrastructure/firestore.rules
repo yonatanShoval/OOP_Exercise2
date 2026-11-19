@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /test-messages/{id} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['text', 'device', 'clientTime', 'createdAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 200
+        && request.resource.data.device in ['phone', 'computer']
+        && request.resource.data.clientTime is int
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

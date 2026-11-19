@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Infrastructure Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; background: #fff; color: #111; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; font-size: 16px; padding: 8px; }
+    button { font-size: 16px; padding: 8px 16px; }
+    .on { color: green; } .off { color: red; }
+    li { padding: 6px 0; border-bottom: 1px solid #ddd; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <h1>Infrastructure Test</h1>
+  <p>Device: <b id="device"></b> · Network: <b id="net"></b></p>
+  <form id="form">
+    <input id="text" maxlength="200" placeholder="Type a message" autocomplete="off">
+    <button>Send</button>
+  </form>
+  <ul id="list"></ul>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
