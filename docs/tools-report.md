@@ -131,6 +131,97 @@ Phone: iPhone, built-in camera app, cellular network with Wi-Fi off.
 
 The Python `qrcode` library creates codes that the iPhone camera reads in less than 10 seconds from up to 5 meters on a laptop screen, with no app to install. The rotation works, but the timing of a code must not depend on the window's timer.
 
+## 3. Head count: YOLO26 (Ultralytics)
+
+### Tools
+
+| Tool | Version | Role |
+|---|---|---|
+| Ultralytics (Python package) | 8.4.216 | Runs the model |
+| YOLO26n (`yolo26n.pt`) | weights 5.3 MB | Small, fast model |
+| YOLO26x (`yolo26x.pt`) | weights 113.2 MB | Large, slower model |
+| PyTorch | 2.15.0, CPU only | Used by Ultralytics |
+
+The original plan was YOLOv8. Before installing, the official documentation was checked. It says: "Start with YOLO26 for a new project: it is the latest Ultralytics release." (https://docs.ultralytics.com/models/). The documentation also says YOLO26 improves detection of small objects, which matters for the far rows of a lecture hall.
+
+Test code:
+- `tools-tests/03-headcount/python/count_people.py`: counts people with one model setting
+- `tools-tests/03-headcount/python/save_all_boxes.py`: runs YOLO26x @ 1280 once and saves all boxes
+- `tools-tests/03-headcount/python/apply_rule.py`: applies the double-count rule to the saved boxes
+- `tools-tests/03-headcount/python/draw_thin_boxes_conf.py`: draws the saved boxes thin, with confidence, and marks the boxes the rule changed
+
+### Setup
+
+- 16 photo files from the lecturer, from four lessons: 7/11 (p1 to p3), 8/11 (p11 to p15), 11/11 (p21 to p24), 19/11 (p31 to p34). p12 and p15 are the same file (identical SHA-256), so there are 15 different photos. The photos are not in the repository and never leave the computer.
+- Only the class "person" is counted. Confidence threshold: 0.25 (the default).
+- Two settings of the same tool: YOLO26n at image size 640, and YOLO26x at image size 1280.
+- Privacy: Ultralytics usage analytics are turned off with `settings.update({"sync": False})`. According to the Ultralytics privacy page, "Ultralytics does not collect, process, or view any training or inference images." `sentry-sdk` is not installed, so no crash reports are sent.
+- The model weights were downloaded once from the official Ultralytics GitHub releases. They are not in the repository.
+- The package `ultralytics-platform` was installed as a dependency. It is not used, and no Ultralytics account was connected.
+
+### Results: accuracy
+
+Manual count rule: every person of whom any part is visible, if it is clearly a separate person. The lecturer is not in the photos.
+
+| Photo | Manual | YOLO26x @ 1280 | Difference | YOLO26n @ 640 | Difference |
+|---|---|---|---|---|---|
+| p1 | 38 | 39 | +1 | 7 | −31 |
+| p11 | 44 | 45 | +1 | 12 | −32 |
+| p21 | 43 | 43 | 0 | 10 | −33 |
+| p31 | 46 | 46 | 0 | 11 | −35 |
+| **Total** | **171** | **173** | **+2** | **40** | **−131** |
+
+### Results: run time and offline run
+
+| | YOLO26n @ 640 | YOLO26x @ 1280 |
+|---|---|---|
+| Average time per photo (CPU) | 99 ms | 5,256 ms |
+
+Offline: with the computer disconnected from the internet (checked in a browser first), YOLO26n @ 640 counted p1 again with the same result (7). No message, warning or error appeared, and nothing was downloaded. YOLO26x was not tested offline.
+
+### Visual check
+
+- The boxes were redrawn thin and without labels, because the default labels hid people in the far rows.
+- In p1 and p11, the extra box of YOLO26x (the one with the lowest confidence: 0.31 and 0.36) contains only the legs of a student who was already counted. The desk separates the upper body from the legs, and the model detected the two parts as two people. This explains the +1 in both photos.
+- No person without a box was found in p1 or p11.
+- p21 and p31 were not checked visually. A difference of 0 does not prove that every box is correct: a missed person and an extra box can cancel each other out.
+
+### A rule against double counting
+
+The lecturer does not change the way the photos are taken, so the fix must be in software. A rule was added on top of the model's boxes (the model is not changed):
+
+- **Part 1, merge:** two boxes are one person if the horizontal overlap is at least 80% of the narrower box, at least 80% of the smaller box's area is inside the larger box, and the top edges differ by at most 20% of the smaller box's height. The last condition is relative to the box height, not a fixed number of pixels, because boxes in the far rows are small.
+- **Part 2, drop:** a box is not counted if it is at least 1.5 times wider than tall, its center is in the bottom third of the photo, and its confidence is below 0.40 (a legs-only box).
+
+The first version of the rule merged two boxes that were two different people (in p13 and p23), found in a visual check. The top-edge condition was added and the legs threshold was changed once, and then the tuning was stopped. In p24, the visual check confirmed that both merges were correct: three boxes of one student, and two boxes of another student in a far row. After the corrected rule, every change it made in all photos was checked visually and found correct: 12 merges (not counting p15, the copy of p12), each of one person, and 2 dropped boxes (in p1 and p24), each with the legs of a student who was already counted. In p13 and p23, the students that the first version merged by mistake are now counted separately.
+
+| Lesson | Photo | YOLO26x @ 1280 | After the rule | Manual |
+|---|---|---|---|---|
+| 7/11 | p1 / p2 / p3 | 39 / 39 / 25 | 38 / 38 / 25 | 38 / – / – |
+| 8/11 | p11 / p12 / p13 / p14 | 45 / 31 / 30 / 43 | 44 / 30 / 28 / 40 | 44 / – / – / – |
+| 11/11 | p21 / p22 / p23 / p24 | 43 / 43 / 38 / 41 | 43 / 43 / 38 / 38 | 43 / – / – / – |
+| 19/11 | p31 / p32 / p33 / p34 | 46 / 46 / 47 / 47 | 46 / 46 / 46 / 46 | 46 / – / – / – |
+
+(p15 is the same file as p12 and is not shown.)
+
+After the rule, all four manually counted photos match the manual count. **All thresholds of the rule were set after seeing the errors in these photos, so there is a risk of overfitting.** The real test will be on new photos, in the demo.
+
+Photos of the same lesson still give different counts (for example 28 to 44 on 8/11). This does not come from the desk. Combining several photos of one lesson without counting a student twice is an open question for the SRS.
+
+### Limitations
+
+- The manual count was done after the model's results were already seen, which may have influenced it.
+- Only 4 photos were counted by hand, by one person.
+- Only the CPU was used. A GPU was not tested.
+
+### License
+
+Ultralytics YOLO is licensed under AGPL-3.0 (https://www.ultralytics.com/license). According to the license page, using YOLO code or models means you "must either: Open-source your entire project under AGPL-3.0, or Obtain an Ultralytics Enterprise License." The free option was chosen: this repository is public, and a `LICENSE` file with the AGPL-3.0 text was added to it.
+
+### Conclusion
+
+YOLO26x at 1280 was within 0 to 1 of the manual count on all four checked photos, in about 5 seconds per photo on a regular CPU, fully on the local computer. YOLO26n at 640 is about 50 times faster but found only about a quarter of the people, so it is not suitable for a lecture hall of this size. The main error was a student split in two by the desk. A simple rule on the boxes fixed it in these photos, but its thresholds still need to be tested on new photos.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
@@ -140,6 +231,10 @@ What worked well:
 - It checked that the JS SDK version exists on the CDN and contains the functions the code uses, before using it.
 - It checked with `git check-ignore` that the secret key folder is blocked before the key was downloaded.
 - It checked how the `qrcode` image connects to tkinter before writing the code.
+- At my request, it checked the Ultralytics documentation for the latest model, the license and the analytics setting before installing.
+- It suggested redrawing the saved boxes for the visual check, without running the model again.
+- It noticed that p12 and p15 had identical boxes, which led to finding that they are the same file.
+- The plan first said 17 photos, a number from my message that was not counted. Claude Code counted the files, corrected it to 16, and later found that two of them are the same file.
 
 What did not work well:
 - In step 1 it wrote facts about the class that were not in the assignment (an estimated number of students). I caught and removed them.
@@ -147,3 +242,5 @@ What did not work well:
 - It wrote in the code that pending messages survive "a page refresh" without testing it, and planned a refresh test without noticing that the page does not load without a network. The test was redesigned before it was run.
 - It did not anticipate that the iPhone turns Wi-Fi back on automatically. I found it, and the tests were repeated.
 - It did not anticipate that the window's timer drifts. The drift was found in the terminal log during testing.
+- It used `2>&1` in the installation command, although its own instructions say not to do this in Windows PowerShell 5.1. This made a successful installation look like a failure.
+- Its first version of the double-count rule merged two different people in p13 and p23. The visual check found it.

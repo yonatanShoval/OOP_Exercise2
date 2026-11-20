@@ -54,3 +54,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 - [ ] 10. Demo web app
 - [ ] 11. Demo in class
 - [ ] 12. Summary of results
+
+## License
+
+License: AGPL-3.0 (required by Ultralytics YOLO, see docs/tools-report.md)

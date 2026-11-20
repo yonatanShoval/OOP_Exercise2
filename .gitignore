@@ -13,3 +13,6 @@ __pycache__/
 
 # Private notes for the defense, never commit
 private-notes/
+
+# Model weights (large, AGPL-3.0, downloaded on first use)
+*.pt
