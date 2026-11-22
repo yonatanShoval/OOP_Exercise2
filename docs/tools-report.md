@@ -222,6 +222,49 @@ Ultralytics YOLO is licensed under AGPL-3.0 (https://www.ultralytics.com/license
 
 YOLO26x at 1280 was within 0 to 1 of the manual count on all four checked photos, in about 5 seconds per photo on a regular CPU, fully on the local computer. YOLO26n at 640 is about 50 times faster but found only about a quarter of the people, so it is not suitable for a lecture hall of this size. The main error was a student split in two by the desk. A simple rule on the boxes fixed it in these photos, but its thresholds still need to be tested on new photos.
 
+## 4. Attendance sheet: openpyxl and Google Sheets
+
+### Tools
+
+| Tool | Version | Role |
+|---|---|---|
+| openpyxl | 3.1.5 | Writes an .xlsx file on the computer, no network needed |
+| gspread, with the Google Sheets API | 6.2.1 | Writes to a Google Sheet online |
+
+Test code:
+- `tools-tests/04-spreadsheet/python/make_xlsx.py`: builds the .xlsx file
+- `tools-tests/04-spreadsheet/python/write_google_sheet.py`: writes to the Google Sheet and reads it back
+
+### Setup
+
+- **.xlsx (offline):** the script reads the lecturer's participant list and writes a new attendance sheet with first name, last name, group and one lesson column. The email column is not copied. The attendance marks are invented and the column is labeled "TEST DATA". The participant list and the output file stay outside the repository.
+- **Google Sheets (online):** only invented data (Student 01 to Student 10). The real participant list is never sent to the cloud.
+- **Access:** the script uses the existing Firebase service account key. The sheet is shared with the service account's email as an editor. The Google Sheets API had to be enabled in the Google Cloud project first.
+
+### Free plan limits
+
+From the Google Sheets API usage limits page:
+- "All standard use of the Google Sheets API is available at no additional cost."
+- Read requests: 300 per minute per project, 60 per minute per user per project. Write requests have the same limits.
+- The page says charges for going over the limits are planned for later in 2026.
+
+### Results
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Build an .xlsx file from the participant list | **Pass.** 104 students, 84 marked present (invented). Two students have an empty group cell, as in the source file. The file opened correctly in Excel, without an email column. |
+| 2 | Write to a Google Sheet and read it back | **Pass.** 10 invented students written in 3.36 s, including login. The 10 rows read back matched exactly. The rows were also checked by eye in the sheet itself. |
+
+### Limitations and difficulties
+
+- The first run of `make_xlsx.py` crashed: when the last cells of a row are empty, the row comes back shorter. Fixed by padding short rows.
+- The first Google Sheets run failed with "404: Requested entity was not found". The cause was the link: it was typed by hand from a screenshot, and it had a lowercase "l" in place of a capital "I" in two places. A link copied straight from the browser worked. The lesson: copy links straight from the browser. A 404 here can mean either a wrong link or a sheet that was not shared.
+- Only one small write was tested. The quota was not tested.
+
+### Conclusion
+
+openpyxl creates an attendance file that opens in Excel with no network and no account. gspread writes the same kind of table to Google Sheets in a few seconds with the existing service account. Real student data stays only in the local file.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
