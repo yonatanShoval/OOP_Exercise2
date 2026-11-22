@@ -265,6 +265,48 @@ From the Google Sheets API usage limits page:
 
 openpyxl creates an attendance file that opens in Excel with no network and no account. gspread writes the same kind of table to Google Sheets in a few seconds with the existing service account. Real student data stays only in the local file.
 
+## 5. Existing poll tool: Google Forms
+
+### Purpose
+
+The README says that current teaching tools are too complicated to use quickly in class. This test measures one existing tool, Google Forms, from both sides: how long it takes the lecturer to create a one-question poll, and how long it takes a student to answer it on a phone.
+
+### Setup
+
+- One multiple-choice question, no personal details.
+- Settings: "Collect email addresses" off and "Limit to 1 response" off, so that no Google sign-in is required.
+- The link was sent to the phone over WhatsApp.
+- Phone: iPhone, Chrome, cellular network with Wi-Fi off.
+- Times were read from screen recordings, frame by frame, to about 0.5 s.
+
+### Results
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Create the form, first time (including learning the tool) | 6:03 min |
+| 2 | Create the form, second time | 1:21 min |
+| 3 | Answer on the phone, Chrome signed in to a Google account | **Pass.** 3 taps (the link, an answer, Submit), about 7 s from tapping the link to the confirmation. Loading took about 2.5 s. |
+| 4 | Answer on the phone, Chrome incognito, no account (like a student without Google) | **Pass.** No sign-in was required. After the form loaded: 2 taps (an answer, Submit), the same as test 3 without the tap on the link. Loading took about 1 s. Total time not reported: the recording had about 4 s with no action. |
+| 5 | The answers reach the lecturer | **Pass.** The responses tab showed 3 responses: the two tests and one earlier try before the recordings. |
+
+### Notes
+
+- **An extra step for the lecturer:** the form must be published. Before that, a student who opens the link sees that the form is not published.
+- In test 3, the signed-in account's email was shown at the top of the form but was not collected.
+- In test 4, Google only suggested signing in to save progress. It was not required.
+- In test 4 the link was pasted into the incognito window. These taps are not counted, because a real student opens the link directly.
+- No other obstacles appeared.
+
+### Limitations
+
+- One question and one phone. Android was not tested.
+- In test 4, the total time was not measured.
+- The time for the lecturer to send the link to a whole class was not measured.
+
+### Conclusion
+
+For the student, Google Forms is fast: about 7 seconds and 3 taps, with no sign-in. The cost is on the lecturer's side: even after learning the tool, creating and publishing a one-question poll took over a minute, and the link still has to reach the students. A quick poll in our app should therefore focus on the lecturer: opening a question in a few seconds, on a page the students already have open.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
