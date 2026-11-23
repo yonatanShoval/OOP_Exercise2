@@ -307,6 +307,64 @@ The README says that current teaching tools are too complicated to use quickly i
 
 For the student, Google Forms is fast: about 7 seconds and 3 taps, with no sign-in. The cost is on the lecturer's side: even after learning the tool, creating and publishing a one-question poll took over a minute, and the link still has to reach the students. A quick poll in our app should therefore focus on the lecturer: opening a question in a few seconds, on a page the students already have open.
 
+## 6. Lecture summary: Whisper (local) and Claude (chat)
+
+### Tools
+
+| Tool | Version | Role |
+|---|---|---|
+| faster-whisper | 1.2.1 | Transcribes the recording on the computer |
+| Whisper model `large-v3-turbo` | int8, 1,547 MB on disk | The speech-to-text model (not `large-v3`) |
+| PyAV | 18.1.1 | Reads the audio from the video file (comes with its own FFmpeg) |
+| Claude (chat, free) | | Summarizes the transcript, by hand |
+
+Test code: `tools-tests/06-transcription/python/transcribe.py`
+
+### Setup
+
+- **Why faster-whisper:** the original `openai-whisper` needs the `ffmpeg` command-line tool installed separately. faster-whisper reads audio through PyAV, which includes FFmpeg, so nothing else had to be installed.
+- **Model:** one model only, `large-v3-turbo`, to save time. Language set to Hebrew. CPU only.
+- **Computer:** Intel Core i3-1005G1, 7.8 GB RAM, no graphics card.
+- **Clip:** 4:43 minutes of the lesson in which the lecturer explained this assignment (the part on features 2 and 3). Only the lecturer speaks in it.
+- **Privacy:** the recording stays on the computer. Only the model weights are downloaded, once. The transcript was pasted into the Claude chat by hand, which is why a clip with only the lecturer was chosen. The recording, the transcript and the Zoom materials are not in the repository.
+- **Measurement:** the script times model loading, audio decoding and transcription separately. It divides the transcription time by the clip length, and multiplies by the length of the full recording (01:33:52, from the Zoom summary) to estimate a whole lesson. The script prints only the timing numbers, not the transcript.
+
+### Results
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Short check on a 5.7 s video | **Pass.** Model load 11.5 s, transcription 18.9 s. Too short to measure speed per minute: the model always processes at least a 30-second window. |
+| 2 | Transcribe the 4:43 clip | **Pass.** Model load 12.5 s, audio decoding 1.1 s, transcription 314.0 s = **66.5 s of processing per minute of recording**. 89 segments. |
+| 3 | Estimate for a full 93.9-minute lesson | **About 104 minutes**, a little longer than the lesson itself. |
+| 4 | Summary in the Claude chat | **Pass.** Five points: free-text comments, maybe next to attendance, no emojis; the lecturer reads the comments of each lesson by hand; the lecturer decides if comments are allowed during the lesson or only after it; polls are started by the lecturer, multiple choice, closed after about two minutes, unlike comments, which the student starts; principles: simplicity, no invented features, a good metaphor. It also spotted a transcription error: "כהות" is probably "Kahoot". |
+
+### Comparison with the Zoom summary
+
+- Zoom's summary of the whole lesson caught the main points of this part, but missed five details: the lecturer's control over when comments are allowed, comments grouped by lesson, closing a poll, the difference between a comment and a poll, and the warning against inventing extra features.
+- Zoom's summary also numbers the features incorrectly.
+- Caveat: Zoom summarized an hour and a half, and we summarized five minutes. A short summary can naturally keep more detail.
+
+### Comparison with Zoom's own transcript
+
+- Whisper was better with English terms, and wrote the sentence quoted from the assignment correctly.
+- But in the first 30 seconds Whisper wrote only "תודה רבה" ("thank you very much") and missed the opening. At the end it invented "תודה" four times over silence. This is a known problem of Whisper models on silence.
+- Conclusion: a Whisper transcript must be checked before it is trusted.
+
+### Problems and fixes
+
+- **Version clash:** the first run failed with `TypeError: open() got an unexpected keyword argument 'metadata_errors'`. faster-whisper 1.2.1 passes this argument to PyAV, and PyAV 19.0.0 removed it ("Remove the `metadata_encoding` and `metadata_errors` arguments to av.open"). faster-whisper only asks for `av>=11`, so pip installed PyAV 19. **Fix:** pin `av==18.1.1` in `requirements.txt`.
+- On Windows, the model download prints a warning that symlinks are not supported. The cache still works, and only uses more disk space.
+
+### Limitations
+
+- One clip of 4:43 minutes, one model, one computer. The estimate for a full lesson is linear, so silence and several speakers in a real lesson can change it.
+- Filtering out silence before transcription (faster-whisper has a `vad_filter` option) may prevent the invented words, but it was not tested.
+- The summary was made by hand in the chat. In the real system this step would need to be automated, and that was not tested.
+
+### Conclusion
+
+faster-whisper transcribes Hebrew locally with no separate installs, and handles English terms better than Zoom's transcript. On a regular laptop CPU it takes about as long as the lesson itself, so a summary will be ready about two hours after the lesson, not right at its end. The transcript can contain invented words over silence, so it must be checked. The Claude summary of the clip kept details that the Zoom summary missed.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
