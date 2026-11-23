@@ -365,6 +365,54 @@ Test code: `tools-tests/06-transcription/python/transcribe.py`
 
 faster-whisper transcribes Hebrew locally with no separate installs, and handles English terms better than Zoom's transcript. On a regular laptop CPU it takes about as long as the lesson itself, so a summary will be ready about two hours after the lesson, not right at its end. The transcript can contain invented words over silence, so it must be checked. The Claude summary of the clip kept details that the Zoom summary missed.
 
+## 7. Homework review: Claude (chat)
+
+### Tools
+
+| Tool | Version | Role |
+|---|---|---|
+| git | | Downloads each repository (`git clone --depth 1`) |
+| `bundle_repo.py` (our script) | | Packs each repository into one text file for the chat |
+| Claude (chat) | | Reviews and compares the two repositories, by hand |
+
+Test code:
+- `tools-tests/07-homework-review/python/bundle_repo.py`: packs one repository, or a whole list of repository links (`--list`)
+- `tools-tests/07-homework-review/review_prompt.md`: the review request, exactly as sent
+
+### Setup
+
+- **Repositories:** two public Ex1 submissions from the lecturer's list. In this report they are called **Repo A** and **Repo B**, with no names or links, because comparisons are anonymous.
+- **Criteria:** taken from the Ex1 assignment: the to-do list, the implementation requirements, the plane definition (|dist(a,b) − dist(a,c)| < 0.001), invalid input (an exception, and an error frame in the demo), and the submission rules.
+- **Focus:** the review looks mainly at the text, meaning the README and the documentation: do they cover the requirements, the algorithm, and how to run? It also ranks the repos. It supports a human grader and does not replace one.
+- **Why a bundle:** the chat cannot read a GitHub repository by itself. The script writes the full file tree with sizes (data files are listed, not included), then the text files, most important first: the README, the main documents, `Ex0.py`, the main code, the other documents, the tests, and the helper scripts. It stops at a character budget and lists the files that did not fit. The request tells the reviewer not to treat those files as missing.
+- **Input and output:** with `--list`, the script reads a file with one repository link per line, and writes one bundle per link, named Repo A, Repo B and so on. The key from name to link stays outside the repository.
+
+### Results
+
+| # | Test | Result |
+|---|---|---|
+| 1 | Download both repositories | **Pass.** 27.9 s for both. |
+| 2 | Pack them | **Pass.** Repo A: all 18 text files, 110,254 characters. Repo B: 25 of 62 text files, 155,849 characters. Its 13 test files, the data-generation and tool scripts, the raw experiment results and `docs/DATA.md` were left out. |
+| 3 | Attach both bundles in the chat and send the request | **Pass.** Both files were accepted, and the answer took 65 s. |
+| 4 | The answer | **Pass.** For each repo: a table with each to-do item and requirement, then strengths and weaknesses of the documentation, each with a file name. Then a comparison by topic, a ranking (Repo B documented better, Repo A second, with reasons), and what each repo could learn from the other. It said "not visible in the bundle" where it could not check, for example the commit history and the real fps. |
+| 5 | Check three of its claims against the code (read only) | **3 of 3 correct.** (1) In Repo B, unequal legs of the triangle only give a warning, at a tolerance of 0.5 voxels (`plane_projection/geometry.py`). (2) In Repo A, `_validate` rejects legs that differ by more than 0.001, so a difference of exactly 0.001 is accepted, while the assignment requires less than 0.001 (`src/projection.py`). This matters only at the exact boundary. (3) Repo B's SRS cites a `test_video` test file that does not exist in the repository (`docs/SRS.md`). |
+
+### Problems and fixes
+
+- **An unfair first bundle:** with a budget of 100,000 characters, Repo B's long documents filled the bundle and its main code was left out, while Repo A's code was in. **Fix:** the main code is now packed before the other documents, and the budget is 150,000 characters per repository.
+
+### Limitations
+
+- Two repositories, one run, and three claims checked. The rest of the review was not verified.
+- Repo B's tests were not in its bundle, so the review could not judge them. A larger repository will lose more files.
+- The bundles do not include the address of the repository itself. So the review's point that Repo A shows "no public repo link" may come partly from our packing, not only from the repository.
+- The bundles are sent to the chat as they are. These are public repositories, but any names in the files reach the chat.
+- The review was done by hand in the chat. In the real system, a list of links goes in and a report for each one comes out automatically. That needs the model through an API, which was not tested.
+
+### Conclusion
+
+Claude, with a simple packing script, produced a structured, anonymous review and ranking of two submissions in about a minute, and all three claims we checked against the code were correct. The packing step matters: it decides what the reviewer sees, so it must be fair to every repository, and the review must say what it could not see.
+
 ## Working with Claude Code
 
 Notes collected during the tests. This section will be completed at the end of step 3.
