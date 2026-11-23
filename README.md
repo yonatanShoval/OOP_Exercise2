@@ -44,7 +44,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 
 - [x] 1. Repository, problem and scope (this README)
 - [ ] 2. Submit the repository
-- [ ] 3. Tools report (every tool tested for real)
+- [x] 3. Tools report (every tool tested for real): [docs/tools-report.md](docs/tools-report.md)
 - [ ] 4. SoW
 - [ ] 5. SRS
 - [ ] 6. Use cases

@@ -71,7 +71,7 @@ From the official Firebase pricing page (https://firebase.google.com/pricing), S
 
 - Only iPhone with Chrome was tested. Android was not tested.
 - The page itself does not load without a network, because there is no Service Worker. Whether the app must open without a network is an open question for the SRS.
-- The assignment says comments work "in real time / offline". Testing without a network is our interpretation, not an explicit requirement, and will be confirmed with the lecturer.
+- The assignment says comments work "in real time / offline". In class, the lecturer explained that comments during the lesson are allowed only if the lecturer allows them, and otherwise only "offline". From the context, offline means after the lesson, not without a network. Testing without a network is therefore our addition, not a requirement.
 - Anyone can read the test messages, and there is no limit on how many can be added. Test messages contain no personal information. The real system will need authentication.
 - The first offline attempts were discarded: the iPhone may have turned Wi-Fi back on automatically when airplane mode was switched. The tests were repeated with Wi-Fi off the whole time.
 - On Windows, the Firebase CLI sometimes prints an internal error when it closes (`Assertion failed ... src\win\async.c`). It happened after `firebase login` and after a read-only command. In both cases the command had already finished its work: the login was saved and the output was complete. Publishing was not affected.
@@ -413,11 +413,30 @@ Test code:
 
 Claude, with a simple packing script, produced a structured, anonymous review and ranking of two submissions in about a minute, and all three claims we checked against the code were correct. The packing step matters: it decides what the reviewer sees, so it must be fair to every repository, and the review must say what it could not see.
 
+## 8. Summary
+
+| Need | Tool chosen | What worked | What did not work, or was not tested | Conclusion for the design |
+|---|---|---|---|---|
+| Real time, offline, hosting | Firebase (Firestore + Hosting), free plan | Phone to computer in real time. A message sent with no network waits on the phone and arrives later, even after the browser is closed. | The page itself does not load with no network. Only iPhone was tested. | One platform for comments and polls. Python reads the same data. |
+| Phone page | Plain HTML/JS | Opens on a real phone with no app. | | The phone only shows and sends. The logic stays in Python. |
+| Check-in | `qrcode` + tkinter (Python) | The iPhone camera scans in under 10 s, from up to 5 m. | The window's timer drifts. Not tested on a projector. | A rotating code is an addition. A code's validity must use the server's time. |
+| Head count | YOLO26x @ 1280, local | Within 0 to 1 of the manual count, about 5 s per photo, with no cloud. A rule fixed students split by the desk. | YOLO26n missed about three quarters of the people. The rule's thresholds were set on these photos. | Count people, do not recognize them. The real test is on new photos. |
+| Attendance sheet | openpyxl (.xlsx) and gspread (Google Sheets) | An offline file that opens in Excel, and an online sheet written in a few seconds. | Only a small write was tested. | Real student data only in the local file. |
+| Existing poll tool | Google Forms | About 7 s and 3 taps for the student, with no sign-in. | Over a minute for the lecturer to create and publish a poll. | Our polls should make the lecturer's side fast. |
+| Lecture summary | faster-whisper (`large-v3-turbo`), local, + Claude chat | Hebrew transcribed locally, with English terms better than Zoom's transcript. The summary kept details that Zoom missed. | About 104 minutes of processing for a 94-minute lesson. Invented words over silence. A version clash with PyAV 19. | The summary is ready about two hours after the lesson. The transcript must be checked. |
+| Homework review | Our packing script + Claude chat | A structured, anonymous review and ranking in about a minute. Three claims checked against the code, all three correct. | Done by hand. An automatic version needs a paid API, which was not tested. Large repositories lose files to the size budget. | List of links in, one report per link out. It supports a human grader and does not replace one. |
+
+Every tool in this table was tested hands-on, as described in its section.
+
 ## Working with Claude Code
 
-Notes collected during the tests. This section will be completed at the end of step 3.
+Notes collected during the tests of step 3.
 
-What worked well:
+### Vibe coding and find & compose
+
+The heavy parts use existing tools: Firebase, `qrcode`, YOLO26, openpyxl, gspread, faster-whisper and Claude. This is "find & compose". Claude Code wrote the small code that connects them: the test pages, the listener, the rotating code, the double-count rule, the transcription timer and the packing script. This is "vibe coding". In every case the result was checked by a real test or by eye, and several mistakes were found that way (listed below).
+
+### What worked well
 - It proposed a plan and showed every change before saving it.
 - It checked that the JS SDK version exists on the CDN and contains the functions the code uses, before using it.
 - It checked with `git check-ignore` that the secret key folder is blocked before the key was downloaded.
@@ -426,8 +445,14 @@ What worked well:
 - It suggested redrawing the saved boxes for the visual check, without running the model again.
 - It noticed that p12 and p15 had identical boxes, which led to finding that they are the same file.
 - The plan first said 17 photos, a number from my message that was not counted. Claude Code counted the files, corrected it to 16, and later found that two of them are the same file.
+- It checked both Whisper packages with `pip install --dry-run` before installing anything, to see that they work with Python 3.14.
+- It read the video file's header and found that `m21.mp4` is 5.68 seconds long, not the lesson recording, with no extra tools.
+- When the transcription failed, it found the cause in PyAV's changelog and explained it before fixing anything.
+- It noticed that the first homework bundle left out one repository's main code, which would have made the comparison unfair, and fixed it before the review was run.
+- It checked every transcript line number I cited against the saved file.
+- The transcription script prints only timing numbers, not the transcript, because recordings can contain voices of students.
 
-What did not work well:
+### What did not work well
 - In step 1 it wrote facts about the class that were not in the assignment (an estimated number of students). I caught and removed them.
 - In the first draft of `app.js` it used an old version of the JS SDK, 10.12.2. I asked it to check the latest version.
 - It wrote in the code that pending messages survive "a page refresh" without testing it, and planned a refresh test without noticing that the page does not load without a network. The test was redesigned before it was run.
@@ -435,3 +460,13 @@ What did not work well:
 - It did not anticipate that the window's timer drifts. The drift was found in the terminal log during testing.
 - It used `2>&1` in the installation command, although its own instructions say not to do this in Windows PowerShell 5.1. This made a successful installation look like a failure.
 - Its first version of the double-count rule merged two different people in p13 and p23. The visual check found it.
+- The first `make_xlsx.py` crashed on rows that end early when the last cells are empty.
+- It installed faster-whisper without pinning PyAV, so pip took a newer PyAV that breaks it. The first run failed.
+- In a study note, it gave 0.88 s as the time for a message to reach the lecturer. That number is the time to save the message, measured on the phone. I asked it to check the report, and it corrected the note.
+- Its first character budget for the homework bundles, 100,000 characters, was too small for one of the repositories.
+
+### Lessons
+
+- Every claim needs a source: the assignment, the official documentation, or a test that was actually run.
+- A test is not passed until a person has looked at the result: the phone screen, the boxes on the photo, the sheet, the transcript.
+- Pin the versions that matter, including dependencies of dependencies.
