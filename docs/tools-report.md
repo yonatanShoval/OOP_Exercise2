@@ -365,19 +365,22 @@ Test code: `tools-tests/06-transcription/python/transcribe.py`
 
 faster-whisper transcribes Hebrew locally with no separate installs, and handles English terms better than Zoom's transcript. On a regular laptop CPU it takes about as long as the lesson itself, so a summary will be ready about two hours after the lesson, not right at its end. The transcript can contain invented words over silence, so it must be checked. The Claude summary of the clip kept details that the Zoom summary missed.
 
-## 7. Homework review: Claude (chat)
+## 7. Homework review: Claude (chat) and the Gemini API
 
 ### Tools
 
 | Tool | Version | Role |
 |---|---|---|
 | git | | Downloads each repository (`git clone --depth 1`) |
-| `bundle_repo.py` (our script) | | Packs each repository into one text file for the chat |
+| `bundle_repo.py` (our script) | | Packs each repository into one text file |
 | Claude (chat) | | Reviews and compares the two repositories, by hand |
+| Gemini API, free tier | `gemini-4-hydrogen`, `gemini-3.5-flash-lite` | The same review, sent automatically from Python |
+| `google-genai` | 3.6.1 | The Python library for the Gemini API |
 
 Test code:
 - `tools-tests/07-homework-review/python/bundle_repo.py`: packs one repository, or a whole list of repository links (`--list`)
 - `tools-tests/07-homework-review/review_prompt.md`: the review request, exactly as sent
+- `tools-tests/07-homework-review/python/gemini_review.py`: sends the request and the bundles to the Gemini API. It takes the model name as a parameter, saves the answer outside the repository, and prints the time and the token counts.
 
 ### Setup
 
@@ -386,8 +389,21 @@ Test code:
 - **Focus:** the review looks mainly at the text, meaning the README and the documentation: do they cover the requirements, the algorithm, and how to run? It also ranks the repos. It supports a human grader and does not replace one.
 - **Why a bundle:** the chat cannot read a GitHub repository by itself. The script writes the full file tree with sizes (data files are listed, not included), then the text files, most important first: the README, the main documents, `Ex0.py`, the main code, the other documents, the tests, and the helper scripts. It stops at a character budget and lists the files that did not fit. The request tells the reviewer not to treat those files as missing.
 - **Input and output:** with `--list`, the script reads a file with one repository link per line, and writes one bundle per link, named Repo A, Repo B and so on. The key from name to link stays outside the repository.
+- **Why also an API:** the lecturer wants a machine that goes through all the submissions. A hundred manual pastes into a chat do not meet that. So we also tested the Gemini API, which has a free tier.
+- **Gemini setup:**
+  - An API key from Google AI Studio, in a separate Google project used only for the review, so that its quota is not shared with other uses.
+  - The key is kept in `secrets/`, which is blocked by `.gitignore`.
+  - The exact model names were taken from the list the library returns (`client.models.list()`) and match the version the API reports in each answer.
+- **Free tier limits** (from the AI Studio limits page, per project):
 
-### Results
+| Model | Requests per minute | Tokens per minute | Requests per day |
+|---|---|---|---|
+| `gemini-4-hydrogen` | 5 | about 250K | 20 |
+| `gemini-3.5-flash-lite` | 15 | about 250K | 500 |
+
+Most other models show a limit of 0, which means they are not available on the free tier. On the free tier, Google uses the content to improve its products. We accept this here, because the repositories are public and are sent under anonymous names.
+
+### Results: Claude (chat)
 
 | # | Test | Result |
 |---|---|---|
@@ -397,21 +413,47 @@ Test code:
 | 4 | The answer | **Pass.** For each repo: a table with each to-do item and requirement, then strengths and weaknesses of the documentation, each with a file name. Then a comparison by topic, a ranking (Repo B documented better, Repo A second, with reasons), and what each repo could learn from the other. It said "not visible in the bundle" where it could not check, for example the commit history and the real fps. |
 | 5 | Check three of its claims against the code (read only) | **3 of 3 correct.** (1) In Repo B, unequal legs of the triangle only give a warning, at a tolerance of 0.5 voxels (`plane_projection/geometry.py`). (2) In Repo A, `_validate` rejects legs that differ by more than 0.001, so a difference of exactly 0.001 is accepted, while the assignment requires less than 0.001 (`src/projection.py`). This matters only at the exact boundary. (3) Repo B's SRS cites a `test_video` test file that does not exist in the repository (`docs/SRS.md`). |
 
+### Results: Gemini API (automatic)
+
+The same request and the same two bundles were sent to each model, once.
+
+| | `gemini-4-hydrogen` | `gemini-3.5-flash-lite` |
+|---|---|---|
+| Time | 21.8 s | 14.0 s. The first try failed with an error 503: the model was under high demand. The second try passed. |
+| Tokens | 91,136 in, 2,215 out, and 2,279 thinking | 91,748 in, 2,050 out |
+| Claim 1: Repo B's tolerance is 0.5, and it only warns | **Found**, in three places in the answer | **Missed.** It marked Repo B's invalid-input handling as "done". |
+| Claim 2: Repo A accepts a difference of exactly 0.001 | Missed | Missed |
+| Claim 3: Repo B's SRS cites a test file that does not exist | Missed, although the full file tree was in the bundle | Missed |
+| Speed (30 / 100 fps) | "Not visible in the bundle", as the request asks | **Invented:** "done" for both repositories, with no way to check it from the bundle |
+| A new claim | Repo A's loader does not check the voxel type or the size limits. **Partly correct:** we checked `src/io_utils.py`, and these checks are indeed missing. But its SRS does not promise them, so "claims ... that ... does not enforce" overstates it. | None |
+| Ranking | Repo B first, as in the chat | Repo B first, as in the chat |
+| Length | 1,065 words. The request asked for under 900. | 1,151 words. The request asked for under 900. |
+
+**In short:** Claude in the chat found 3 of 3 claims. Hydrogen found 1. Flash Lite found 0, and it invented a result. Each model ran only once, so these numbers are a single sample.
+
+**What the limits mean:** one repository is about 45,000 tokens.
+- **Hydrogen:** 20 requests per day, so 20 submissions per day. A hundred submissions take about five days.
+- **Flash Lite:** a hundred submissions would fit in one day.
+
 ### Problems and fixes
 
 - **An unfair first bundle:** with a budget of 100,000 characters, Repo B's long documents filled the bundle and its main code was left out, while Repo A's code was in. **Fix:** the main code is now packed before the other documents, and the budget is 150,000 characters per repository.
+- **Error 503 from Flash Lite:** the model was under high demand. One retry, soon after, passed. A real run needs to retry.
 
 ### Limitations
 
-- Two repositories, one run, and three claims checked. The rest of the review was not verified.
+- Two repositories, one run per tool, and three claims checked. The rest of the reviews was not verified.
 - Repo B's tests were not in its bundle, so the review could not judge them. A larger repository will lose more files.
 - The bundles do not include the address of the repository itself. So the review's point that Repo A shows "no public repo link" may come partly from our packing, not only from the repository.
-- The bundles are sent to the chat as they are. These are public repositories, but any names in the files reach the chat.
-- The review was done by hand in the chat. In the real system, a list of links goes in and a report for each one comes out automatically. That needs the model through an API, which was not tested.
+- The bundles are sent as they are, to the chat or to the API. These are public repositories, but any names in the files reach the service. On the Gemini free tier, Google also uses them to improve its products.
+- Only the time and the tokens of one request per model were measured. The time to get an API key was not measured.
+- Both Gemini answers were longer than the request allowed.
 
 ### Conclusion
 
 Claude, with a simple packing script, produced a structured, anonymous review and ranking of two submissions in about a minute, and all three claims we checked against the code were correct. The packing step matters: it decides what the reviewer sees, so it must be fair to every repository, and the review must say what it could not see.
+
+The Gemini API makes the review automatic and free, but in our single run it found fewer problems than the chat. **Decision:** `gemini-4-hydrogen` is the main model. A review that invents results, like Flash Lite with the speed, does more harm than a slow review. When the daily quota runs out, the review continues the next day with the same model. It does not switch to another model, so that every submission is reviewed by the same model, and the comparison and the ranking stay fair. The model name is a parameter of the Gemini engine. The manual chat stays as a backup. Every review supports a human grader and does not replace one.
 
 ## 8. Summary
 
@@ -424,7 +466,7 @@ Claude, with a simple packing script, produced a structured, anonymous review an
 | Attendance sheet | openpyxl (.xlsx) and gspread (Google Sheets) | An offline file that opens in Excel, and an online sheet written in a few seconds. | Only a small write was tested. | Real student data only in the local file. |
 | Existing poll tool | Google Forms | About 7 s and 3 taps for the student, with no sign-in. | Over a minute for the lecturer to create and publish a poll. | Our polls should make the lecturer's side fast. |
 | Lecture summary | faster-whisper (`large-v3-turbo`), local, + Claude chat | Hebrew transcribed locally, with English terms better than Zoom's transcript. The summary kept details that Zoom missed. | About 104 minutes of processing for a 94-minute lesson. Invented words over silence. A version clash with PyAV 19. | The summary is ready about two hours after the lesson. The transcript must be checked. |
-| Homework review | Our packing script + Claude chat | A structured, anonymous review and ranking in about a minute. Three claims checked against the code, all three correct. | Done by hand. An automatic version needs a paid API, which was not tested. Large repositories lose files to the size budget. | List of links in, one report per link out. It supports a human grader and does not replace one. |
+| Homework review | Our packing script + the Gemini API (`gemini-4-hydrogen`, free tier). The Claude chat is the backup. | Claude chat: a review and ranking in about a minute, 3 of 3 checked claims found. Gemini: automatic and free, about 22 s per request. | Hydrogen found 1 of 3 claims, and Flash Lite found 0 and invented a result. One run per model. Hydrogen allows 20 requests per day. Large repositories lose files to the size budget. | List of links in, one report per link out, all with the same model. It supports a human grader and does not replace one. |
 
 Every tool in this table was tested hands-on, as described in its section.
 
