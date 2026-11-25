@@ -84,7 +84,7 @@ flowchart TB
 **In plain words:** the student checks in from the phone, and the check-in goes to the database. The gateway (C8) is the only Python part that reads the database, and it passes the check-ins to C9. C9 throws out check-ins with an old code, and marks emails that are not on the course list. Separately, the head counter (C10) counts the people in the photos. The attendance component (C11) puts the two numbers side by side. If they differ, it sends a mismatch alert to the window. The lecturer decides, and C11 gives the final status of each student to the sheet writer (C12).
 
 **Example with numbers:**
-1. **Check-in:** 53 check-ins arrive. C9 rejects 2, because their code is older than 20 seconds. It counts one student who checked in twice only once. That leaves 50 accepted check-ins. One of them has an email that is not on the course list.
+1. **Check-in:** 53 check-ins arrive. The security rules reject 2, because their code is older than 60 seconds. It counts one student who checked in twice only once. That leaves 50 accepted check-ins. One of them has an email that is not on the course list.
 2. **Head count:** the lecturer adds 3 photos. C10 counts 28, 30 and 29 people. The lesson's head count is the highest: **30**.
 3. **Mismatch:** C11 compares 50 check-ins with 30 people. They differ by 20, so the window shows an alert: "50 checked in, 30 counted". A second alert line shows the unknown email.
 4. **Challenge:** the lecturer starts a challenge. The photo with 30 boxes appears on the projector. Of the 50 students who checked in:
@@ -185,7 +185,7 @@ flowchart TB
 | **What it does** | It stores the lessons and everything under them, and pushes each change to whoever is listening, in real time. |
 | **Where it runs** | Cloud Firestore, region `me-west1`, production mode. |
 | **Structure** | One record per lesson. Under it: rotating codes, check-ins, challenge answers, comments, polls and their answers. |
-| **Security rules** | Everything not allowed is blocked. The phone may only create records, never update or delete them. The phone can never read check-ins, which hold emails: only Python reads them, through C8. Each record may have only its own fields, with the server time. A comment is accepted only when comments are open for the lesson (FR-7.3). A poll answer is accepted only while the poll is open (FR-8.6). A challenge answer is accepted only while the challenge is open (FR-5.4). |
+| **Security rules** | Everything not allowed is blocked. The phone may only create records, never update or delete them. The phone can never read check-ins, which hold emails: only Python reads them, through C8. Each record may have only its own fields, with the server time. A check-in is accepted only with a code saved less than 60 seconds ago (FR-2.6). A comment is accepted only when comments are open for the lesson (FR-7.3). A poll answer is accepted only while the poll is open (FR-8.6). A challenge answer is accepted only while the challenge is open (FR-5.4). |
 | **Important** | The rules apply to the phone, not to Python. Python uses the service account, which bypasses the rules (see C8). |
 | **Requirements** | FR-1.2, FR-1.3, FR-2.2, FR-2.5, FR-5.4, FR-7.2, FR-7.3, FR-8.6, NFR-12 |
 | **Tested base** | `tools-tests/01-infrastructure/firestore.rules` |
@@ -245,7 +245,7 @@ All of these are Python classes. The lecturer uses only C6.
 
 | | |
 |---|---|
-| **What it does** | It makes a new random code every 10 seconds, and saves each one with the server time. It listens to new check-ins, and accepts a check-in only if its code was shown in the 20 seconds before it. It checks the email against the course list, and counts each email once. |
+| **What it does** | It makes a new random code every 10 seconds, and saves each one with the server time. Each code is saved under its own value, so the security rules can check it at the entrance: a check-in is saved only if its code is less than 60 seconds old. C9 listens to new check-ins and checks the age again, as a backup. It checks the email against the course list, and counts each email once. |
 | **Talks to** | C6, which shows the code; C7, for the course list; C8; C11, which gets the accepted check-ins and the unknown emails. |
 | **Requirements** | FR-2.1, FR-2.2, FR-2.6 to FR-2.8 |
 | **Tested base** | `tools-tests/02-checkin/python/rotating_qr.py` (qrcode + Pillow). In the test, the window's timer drifted, which is why validity uses the server time. |

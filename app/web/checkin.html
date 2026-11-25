@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Check-in</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; max-width: 480px; background: #fff; color: #111; }
+    h1 { font-size: 24px; }
+    input, button { font-size: 18px; padding: 10px; width: 100%; box-sizing: border-box; margin: 6px 0; }
+    button { background: #1a5fb4; color: #fff; border: 0; border-radius: 6px; }
+    #status { font-size: 20px; font-weight: bold; margin-top: 16px; }
+    .ok { color: #1a7f37; } .bad { color: #c01c28; }
+    a { color: #1a5fb4; }
+  </style>
+</head>
+<body>
+  <h1>Check-in</h1>
+  <form id="email-form" hidden>
+    <label for="email">Your course email (asked once, saved on this phone):</label>
+    <input id="email" type="email" required autocomplete="email">
+    <button type="submit">Save</button>
+  </form>
+  <div id="checkin" hidden>
+    <p>Email: <b id="email-shown"></b> · <a href="#" id="change">change</a></p>
+    <button id="send">Check in</button>
+  </div>
+  <p id="status"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import { getFirestore, collection, doc, getDoc, addDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+    // Public web config (not a secret). Access is protected by firestore.rules:
+    // the page may only create a check-in, and can never read check-ins.
+    const app = initializeApp({
+      apiKey: "AIzaSyDEqOdwdyJmmRSyzqP9PfkxWT90w5bC6OE",
+      authDomain: "oop-exercise2.firebaseapp.com",
+      projectId: "oop-exercise2",
+      storageBucket: "oop-exercise2.firebasestorage.app",
+      messagingSenderId: "913574707847",
+      appId: "1:913574707847:web:5cf2e324d2c711fd0aee22"
+    });
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(location.search);
+    const lesson = params.get("l"), code = params.get("t");
+    const KEY = "teaching-tool-email";
+    const $ = (id) => document.getElementById(id);
+    const status = (text, cls) => { $("status").textContent = text; $("status").className = cls || ""; };
+
+    function show() {
+      const email = localStorage.getItem(KEY);
+      $("email-form").hidden = !!email;
+      $("checkin").hidden = !email;
+      if (email) $("email-shown").textContent = email;
+    }
+
+    $("email-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      localStorage.setItem(KEY, $("email").value.trim().toLowerCase());
+      show();
+    });
+    $("change").addEventListener("click", (e) => {
+      e.preventDefault();
+      $("email").value = localStorage.getItem(KEY) || "";
+      localStorage.removeItem(KEY);
+      show();
+    });
+    $("send").addEventListener("click", async () => {
+      $("send").disabled = true;
+      status("Sending…");
+      try {
+        await addDoc(collection(db, "lessons", lesson, "checkins"),
+          { email: localStorage.getItem(KEY), code, server_time: serverTimestamp() });
+        // Saved means the security rules accepted the code: it is less than 60 s old.
+        // The lecturer's computer still checks the email against the course list.
+        status("Check-in received ✓", "ok");
+      } catch (err) {
+        if (err.code !== "permission-denied") {
+          status("Not sent: " + err.message, "bad");
+        } else {
+          // Rejected at the entrance: check-in closed, or the code expired. The email stays saved.
+          let open = false;
+          try { open = (await getDoc(doc(db, "lessons", lesson))).data()?.checkin_open === true; } catch {}
+          status(open ? "The code expired. Scan the code on the projector again." : "Check-in is closed.", "bad");
+        }
+        $("send").disabled = false;
+      }
+    });
+
+    if (!lesson || !code) status("Scan the code on the projector to check in.", "bad");
+    else show();
+  </script>
+</body>
+</html>

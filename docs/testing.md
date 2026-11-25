@@ -56,7 +56,7 @@ A level starts only after the level before it passes.
 | Class | Test cases (input → expected) | Requirements |
 |---|---|---|
 | `Course` | A list with 104 rows → 104 students. A row with no email → a warning, and the row is kept. The same email twice → one student and a warning. | FR-1.1 |
-| `CheckInService` | Code shown 7 s before the check-in → accepted. 20 s → accepted. 21 s → rejected. An email not on the list → a mismatch. The same email twice → counted once. | FR-2.6 – 2.8 |
+| `CheckInService` | Code saved 7 s before the check-in → accepted. 30 s → accepted (the slowest first check-in in the phone test). 60 s → accepted. 61 s → rejected. An email not on the list → a mismatch. The same email twice → counted once. | FR-2.6 – 2.8 |
 | `DoubleCountRule` | Two boxes with the same left edge and top edges within 20% → merged into one. A wide, low box (width ≥ 1.5 × height) under a person → dropped as legs. Two separate people side by side, like the cases in photos p13 and p23 → not merged. | FR-3.3 |
 | `AttendanceService` | Photo counts 30, 30, 29 → lesson count 30, not 89. 50 check-ins vs 30 → one "count gap". 30 vs 30 → no mismatch. 1 unknown email → one "unknown email". `decide()` → the status is saved. | FR-3.4, FR-4.1, FR-6.1 |
 | `Challenge` | Box 12 chosen by 2 students → "box chosen twice". "Not in the photo" → a mismatch. 20 checked-in students with no answer → listed. Box 7 chosen by no one → listed. An answer after `close()` → rejected. | FR-5.3 – 5.5 |
@@ -104,9 +104,11 @@ flowchart TB
 | A challenge answer after the challenge is closed | create | **denied** (FR-5.4) |
 | Changing or deleting any record | update, delete | **denied** (NFR-12) |
 | Reading check-ins from a phone | read | **denied** (NFR-12): the emails are read only by Python |
+| A check-in with a code saved more than 60 s ago | create | **denied** (FR-2.6) |
+| A check-in with a code that does not exist | create | **denied** (FR-2.6) |
 | Any other collection | read, create | **denied** |
 
-**Example with numbers:** 9 cases. Each one runs once with no key, and then once with the key. Expected: with no key, 1 is allowed and 8 are denied. With the key, all 9 pass, which shows why the key must not be used for this test.
+**Example with numbers:** 11 cases. Each one runs once with no key, and then once with the key. Expected: with no key, 1 is allowed and 10 are denied. With the key, all 11 pass, which shows why the key must not be used for this test.
 
 ## 6. One end-to-end run
 
@@ -114,7 +116,7 @@ Once, before the demo, with invented data and three phones:
 1. Load an invented course list of 10 students, and open a lesson.
 2. **Check-in:**
    - Two phones check in with fresh codes.
-   - One phone uses a code from a photo, taken more than 20 seconds earlier. It must be rejected.
+   - One phone uses a code from a photo, taken more than 60 seconds earlier. It must be rejected, and the phone must say that the code expired.
 3. **Head count:** add a new photo, count it, and check the mismatch alert.
 4. **Challenge:** run a challenge, with one box chosen twice.
 5. **Decision and sheet:** decide each case, and write the `.xlsx` file.
@@ -154,9 +156,10 @@ Each use case passes when its happy path and every edge case behave as the use c
 
 **Live in class:**
 - [ ] Students check in from their phones with the code on the projector.
-- [ ] A **new** photo of the class is counted. The count is within ±10% of a quick manual count (NFR-3).
+- [ ] A **new** photo of the class is taken with the phone, and moved to the laptop, preferably by cable or a local transfer. **Do not send it through WhatsApp as a regular photo**: WhatsApp makes it smaller, which can hurt the count.
+- [ ] The new photo is counted. The count is within ±10% of a quick manual count (NFR-3).
 - [ ] A mismatch alert appears, and a challenge runs on the projector only.
-- [ ] The lecturer decides, and the sheet is written as a local `.xlsx` file only, not to Google Sheets.
+- [ ] The lecturer decides, and the sheet is written as a local `.xlsx` file only, not to Google Sheets. It opens in Excel by itself, so the class sees it at once.
 
 **After the lesson:**
 - [ ] The lesson is closed, and its data is deleted from Firestore (FR-1.5). A read with the key confirms that no check-in is left.

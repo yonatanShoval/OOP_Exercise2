@@ -70,16 +70,16 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 4. The student taps "Check in".
 5. The phone sends the email, the code and the lesson. The database adds the server time.
 6. The phone shows "Check-in received".
-7. The system checks that the code was shown in the 20 seconds before the check-in, and that the email is on the course list. It accepts the check-in.
+7. The security rules check that the code was saved less than 60 seconds before the check-in. Python checks it again, and checks that the email is on the course list. It accepts the check-in.
 8. The window shows the number of accepted check-ins.
 
 **Edge cases:**
-1. **An old code** (for example, a photo of the code sent to a friend at home, used after more than 20 seconds): the system rejects the check-in, and the window shows how many were rejected.
+1. **An old code** (for example, a photo of the code sent to a friend at home, used after more than 60 seconds): the security rules reject the check-in at the entrance. The phone shows "The code expired. Scan the code on the projector again.", and the email stays saved.
 2. **A fresh code passed to someone at home** (for example, in a video call): the code check passes. The head count and the challenge catch it (UC-4, UC-5). The lecturer said that cheaters do not worry him, because the count and the challenge are the check.
 3. **An email that is not on the course list** (for example, a typo): the check-in is saved, and it becomes a mismatch (UC-4).
 4. **The same student checks in twice:** counted once.
 5. **Two students on one phone:** the second student changes the saved email and checks in. Both are counted.
-6. **No network on the phone:** the check-in waits on the phone and is sent when the network returns. If more than 20 seconds have passed, the code is old, and the check-in is rejected. The student scans again.
+6. **No network on the phone:** the check-in waits on the phone and is sent when the network returns. If more than 60 seconds have passed, the code is old, and the check-in is rejected. The student scans again.
 7. **Check-in is stopped:** the page says that check-in is closed.
 8. **A participant from Zoom:** out of scope. Only students in the classroom check in.
 
@@ -89,7 +89,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 
 **Story:** As a lecturer, I want to count the people in the class from a photo, so that I know if the number of check-ins is right, without checking each student.
 
-**Preconditions:** a lesson is open. The lecturer took one or more photos of the class and saved them on the computer.
+**Preconditions:** a lesson is open. The lecturer took one or more photos of the class with their own phone, and moved them to the computer in their usual way. A cable or a local transfer is recommended. An email to themselves or Google Photos also works, but then the photo is in the lecturer's own cloud account (D53). Our system never uploads the photo: an upload from the phone to our cloud was considered and rejected, for privacy.
 
 **Happy path:**
 1. The lecturer adds the photos to the lesson in the window.
@@ -103,7 +103,8 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 3. **The same photo added twice:** the highest count does not change. This happened in the test: two of the lecturer's photos were the same file.
 4. **Photos of different parts of the class:** the highest count would be too low. Summing such photos is out of scope. The lecturer takes photos of the whole class.
 5. **A dark or blurry photo:** the count is low, and the gap shows as a mismatch. The lecturer looks and decides.
-6. **People who are not students** (for example, a guest standing at the side): they are counted. The lecturer's target is ±10%, and the lecturer decides.
+6. **People who are not students** (for example, a guest standing at the side): they are counted.
+7. **The photo was sent through WhatsApp as a regular photo:** WhatsApp makes it smaller, and the count may drop. Send it as a file (document), or use a cable. The lecturer's target is ±10%, and the lecturer decides.
 
 **Outcome:** a head count for the lesson. The photos never leave the lecturer's computer.
 
@@ -165,7 +166,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 1. The lecturer goes over each open case, and marks each student involved as present or absent.
 2. The lecturer clicks "Write sheet", and chooses an offline `.xlsx` file or an online Google Sheet.
 3. The system writes one row per student, with the name, email and group, and adds a column for this lesson with the status.
-4. The window shows where the sheet was written.
+4. The window shows where the sheet was written, and the file opens in Excel.
 
 **Edge cases:**
 1. **A rare case**, like a student who was away for a long time: the lecturer decides by hand. The system does not try to solve it.

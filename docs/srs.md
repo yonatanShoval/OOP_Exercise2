@@ -91,16 +91,16 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-2.3 | When a student scans the code, the phone opens the check-in page of that lesson. |
 | FR-2.4 | The first time, the student types their email. The phone remembers it. Later check-ins send it with no typing. The student can change it. |
 | FR-2.5 | The phone sends the check-in: the email, the code, and the lesson. The database adds the server time. |
-| FR-2.6 | Python accepts a check-in only if its code was shown in the 20 seconds before the check-in's server time, meaning the current code or the one before it. Other check-ins are rejected, and the lecturer sees how many there were. |
+| FR-2.6 | A check-in is accepted only if its code exists and was saved less than 60 seconds before the check-in's server time. The security rules check this at the entrance, so an expired code is rejected before it is saved. Python checks it again as a backup, and the lecturer sees how many check-ins were rejected. 60 seconds, not 20: in the phone test on 25/11, a first check-in with email typing took up to about 30 seconds, and was rejected with 20. |
 | FR-2.7 | Python checks the email against the course list. An email that is not on the list is a mismatch (FR-4.1). |
 | FR-2.8 | A second check-in with the same email in the same lesson is counted once. |
-| FR-2.9 | The phone shows the student that the check-in was received. |
+| FR-2.9 | The phone shows the student the result: "Check-in received", "The code expired. Scan the code on the projector again.", or "Check-in is closed." The saved email stays on the phone. A check-in is never shown as received when it was rejected. |
 
 ### 3.3 Attendance: photo and head count (UC-3)
 
 | ID | Requirement |
 |---|---|
-| FR-3.1 | The lecturer adds one or more photos of the class to the lesson, from a folder on their computer. |
+| FR-3.1 | The lecturer takes the photos with their own phone, as the lecturer described ("he can pick up his phone and take a photo", attendance transcript, lines 29–33). The photo reaches the computer in the lecturer's usual way, and the lecturer adds it to the lesson with "Add class photos". Our system never uploads the photo to any cloud: uploading from the phone to our cloud was considered and rejected, for privacy (D8). A local transfer (cable, or a transfer on the local network) is recommended. If the lecturer uses their own cloud, for example an email to themselves or Google Photos, the photo is in the lecturer's own account, under the lecturer's responsibility (D53). |
 | FR-3.2 | Python counts the people in each photo with a local model (YOLO26x, at an image size of 1280). The photo is never sent to any cloud service. |
 | FR-3.3 | A software rule merges two boxes of the same person into one. For example, when the desk splits a student into an upper body and legs (D28). |
 | FR-3.4 | Each photo is counted on its own. The lesson's head count is the highest count of its photos. |
@@ -130,7 +130,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 |---|---|
 | FR-6.1 | For every open mismatch, the lecturer marks each student involved as present or absent. Rare edge cases are always left to the lecturer. |
 | FR-6.2 | The system writes the attendance to a spreadsheet: one row per student, with the name, email and group, and one column per lesson with the status. |
-| FR-6.3 | The spreadsheet can be an offline `.xlsx` file on the lecturer's computer (openpyxl), or an online Google Sheet (gspread). |
+| FR-6.3 | The spreadsheet can be an offline `.xlsx` file on the lecturer's computer (openpyxl), or an online Google Sheet (gspread). After the `.xlsx` file is written, it opens in Excel automatically. |
 | FR-6.4 | Only invented data is written to Google Sheets. A sheet with real names is kept only as an `.xlsx` file on the lecturer's computer, also in the demo. |
 
 ### 3.7 Comments and suggestions (UC-7, UC-8)

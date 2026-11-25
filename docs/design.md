@@ -97,10 +97,10 @@ classDiagram
 ```
 
 **In plain words:** a `Course` is made of `Student`s, loaded from the `.xlsx` list. A `Lesson` is made of the codes that were shown in it and the check-ins it received. `CheckInService` makes a new code every 10 seconds. For each check-in, it asks two questions:
-- Was the code shown in the last 20 seconds?
+- Was the code saved less than 60 seconds before the check-in? (The security rules ask this first; this class asks again, as a backup.)
 - Is the email on the course list?
 
-**Example with numbers:** a lesson of 90 minutes, with check-in open for the first 10 minutes. 10 minutes is 600 seconds, so `next_code()` makes 60 `RotatingCode`s. A check-in arrives at 09:05:30 with a code shown at 09:05:20: 10 seconds old, so `accept()` returns `True`. A second check-in uses a code from 09:04:50: 40 seconds old, so `accept()` returns `False`. A third has the email `x@typo.com`: `Course.find()` returns nothing, so it becomes a mismatch.
+**Example with numbers:** a lesson of 90 minutes, with check-in open for the first 10 minutes. 10 minutes is 600 seconds, so `next_code()` makes 60 `RotatingCode`s. A check-in arrives at 09:05:30 with a code shown at 09:05:20: 10 seconds old, so `accept()` returns `True`. A second check-in uses a code from 09:03:50: 100 seconds old, more than 60, so `accept()` returns `False` (in practice, the security rules already rejected it at the entrance). A third has the email `x@typo.com`: `Course.find()` returns nothing, so it becomes a mismatch.
 
 ### 2.2 Attendance (part 2): head count, mismatch and challenge
 
@@ -356,7 +356,7 @@ classDiagram
 
 **In plain words:** `Database` is the only way to reach the data. In the sequence diagrams, the object behind this interface appears as `DatabaseGateway` (component C8), so that it is not confused with Firestore itself: Firestore is the database in the cloud, and the gateway is the Python door to it. The real implementation uses Firestore with the service account key. The fake one keeps everything in a Python dictionary in memory, so the unit tests need no network and no key. `SheetWriter` writes the same rows either to a local `.xlsx` file or to a Google Sheet.
 
-**Example with numbers:** a unit test of `CheckInService` gives it a `FakeDatabase` with 3 check-ins: one fresh, one 40 seconds old, and one with an unknown email. The test expects 1 accepted, 1 rejected and 1 mismatch, and runs in well under a second, with no internet. In class, the same `CheckInService` gets a `FirestoreDatabase` instead, and its code does not change.
+**Example with numbers:** a unit test of `CheckInService` gives it a `FakeDatabase` with 3 check-ins: one fresh, one 100 seconds old, and one with an unknown email. The test expects 1 accepted, 1 rejected and 1 mismatch, and runs in well under a second, with no internet. In class, the same `CheckInService` gets a `FirestoreDatabase` instead, and its code does not change.
 
 **LLM: `LlmEngine`**
 
@@ -403,9 +403,10 @@ sequenceDiagram
     K->>W: show code
     S->>P: scan code
     P->>F: add check-in
+    Note over F: rules: check-in open?<br/>code under 60 s old?
     F-->>D: new check-in
     D->>K: on_new(check-in)
-    K->>K: code age ≤ 20 s?
+    K->>K: code age < 60 s? (backup)
     K->>C: find(email)
     C-->>K: student
     K->>W: accepted: 1 more
@@ -414,14 +415,16 @@ sequenceDiagram
 
 **In plain words:**
 1. `CheckInService` saves each new code with the server time, and the window shows it.
-2. The student scans the code. The page adds a check-in to Firestore, and the database adds the server time.
+2. The student scans the code. The page adds a check-in to Firestore, and the database adds the server time. The security rules check at the entrance that check-in is open and that the code is less than 60 seconds old. If not, the write is rejected, and the phone says why: the code expired, or check-in is closed.
 3. Firestore pushes it to Python, through the gateway.
 4. `CheckInService` checks the age of the code and the email.
 5. The window shows one more accepted check-in.
 
-The page tells the student "Check-in received" as soon as Firestore saved it. That message means "saved", not "accepted".
+The page tells the student "Check-in received" as soon as Firestore saved it. Because the rules checked the code first, a saved check-in always had a valid code. Python then checks the email against the course list.
 
-**Example with numbers:** the code "K7Q2" is shown at 09:05:20. The student scans it, and the check-in gets the server time 09:05:27. The age is 7 seconds, which is at most 20, so the check-in passes. The email is on the list. The window counter goes from 41 to 42.
+Why the check is at the entrance: in the phone test on 25/11, the code was checked only in Python, after the write had already succeeded. A check-in with an expired code was saved, so the phone said "received", while Python rejected it. The student believed they had checked in, but had not (D52).
+
+**Example with numbers:** the code "K7Q2" is shown at 09:05:20. The student scans it, and the check-in gets the server time 09:05:27. The age is 7 seconds, less than 60, so the security rules let it in, and the check-in passes. The email is on the list. The window counter goes from 41 to 42.
 
 ### 3.2 Attendance: head count, mismatch, challenge and decision
 

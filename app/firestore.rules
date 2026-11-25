@@ -1,0 +1,37 @@
+rules_version = '2';
+// Security rules for the phones. Python uses the Admin SDK, which bypasses these rules,
+// so they must be tested as a client, without the key (docs/testing.md, section 5).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The lesson record holds no personal data (date, checkin_open, closed). The page reads it
+    // only to tell the student why a check-in was rejected: closed, or an expired code.
+    match /lessons/{lessonId} {
+      allow get: if true;
+    }
+
+    // A check-in: the phone may only create one, while check-in is open for the lesson, and
+    // only with a code that Python saved less than 60 seconds ago (server time). The code is
+    // checked here, at the entrance, so the phone learns at once if it expired (D52).
+    // The phone can never read, change or delete check-ins: they hold emails, and only Python reads them.
+    match /lessons/{lessonId}/checkins/{checkinId} {
+      allow create: if request.resource.data.keys().hasAll(['email', 'code', 'server_time'])
+        && request.resource.data.keys().hasOnly(['email', 'code', 'server_time'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 100
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+$')
+        && request.resource.data.code is string
+        && request.resource.data.code.matches('^[A-Za-z0-9_-]{1,20}$')
+        && request.resource.data.server_time == request.time
+        && get(/databases/$(database)/documents/lessons/$(lessonId)).data.checkin_open == true
+        && exists(/databases/$(database)/documents/lessons/$(lessonId)/codes/$(request.resource.data.code))
+        && request.time < get(/databases/$(database)/documents/lessons/$(lessonId)/codes/$(request.resource.data.code)).data.server_time
+                          + duration.value(60, 's');
+    }
+
+    // Everything else, including the old test collection, is blocked for the phones.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

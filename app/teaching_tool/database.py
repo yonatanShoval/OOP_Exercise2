@@ -23,6 +23,10 @@ class Database(ABC):
         """Create or replace the document at path."""
 
     @abstractmethod
+    def set_stamped(self, path: str, data: dict) -> None:
+        """Create or replace the document at path, stamped with the server time."""
+
+    @abstractmethod
     def get(self, path: str) -> dict | None:
         """The document at path, or None."""
 
@@ -61,6 +65,9 @@ class FakeDatabase(Database):
 
     def set(self, path, data):
         self._docs[path] = dict(data)
+
+    def set_stamped(self, path, data):
+        self._docs[path] = {**data, "server_time": self.clock()}
 
     def get(self, path):
         doc = self._docs.get(path)

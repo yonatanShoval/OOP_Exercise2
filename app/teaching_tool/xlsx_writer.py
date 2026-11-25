@@ -1,0 +1,48 @@
+"""The local .xlsx attendance sheet (component C12, offline implementation).
+
+One row per student, one column per lesson. A sheet with real names is kept only as a
+file on the lecturer's computer (FR-6.3, FR-6.4, D49).
+"""
+from pathlib import Path
+
+import openpyxl
+
+from .sheet_writer import SheetWriter
+
+FIXED = ["First name", "Last name", "Email", "Group"]
+
+
+class XlsxSheetWriter(SheetWriter):
+    def __init__(self, path: str | Path):
+        self.path = Path(path)
+
+    def write_attendance(self, lesson_name, rows):
+        """Add (or replace) this lesson's column. Students are matched by email."""
+        if self.path.exists():
+            wb = openpyxl.load_workbook(self.path)
+            ws = wb.active
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Attendance"
+            ws.append(FIXED)
+
+        header = [c.value for c in ws[1]]
+        if lesson_name in header:
+            col = header.index(lesson_name) + 1
+        else:
+            col = len(header) + 1
+            ws.cell(row=1, column=col, value=lesson_name)
+
+        row_of = {str(ws.cell(row=r, column=3).value or "").lower(): r for r in range(2, ws.max_row + 1)}
+        for data in rows:
+            r = row_of.get(data["email"].lower())
+            if r is None:
+                r = ws.max_row + 1
+                for c, key in enumerate(("first_name", "last_name", "email", "group"), start=1):
+                    ws.cell(row=r, column=c, value=data[key])
+                row_of[data["email"].lower()] = r
+            ws.cell(row=r, column=col, value=data["status"])
+        wb.save(self.path)
+        return str(self.path)
