@@ -302,7 +302,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 4. **The lecturer does not confirm** (for example, students' names appear in the transcript): nothing is sent, and there is no summary. The transcript stays on the lecturer's computer.
 5. **The Gemini API is not available** (after the lecturer confirmed): the manual backup writes the request to a file, and the lecturer pastes it into an LLM chat.
 6. **The daily free quota has run out:** the summary has its own Google project and key, with its own 20 requests per day, so the homework review does not use them up. One summary per day is enough. If the quota still runs out, the summary is sent the next day.
-7. **The model is busy** (error 503): the system tries again, at most three times in all. After that, the window says that the summary failed, and the transcript stays.
+7. **The model is busy** (error 503): the system tries again, at most three times in all, and waits longer before each new try: 30 seconds, then 60 seconds. If all three fail, the summary switches to the fallback model, `gemini-3.6-flash`, and records which model made it. This is allowed here, unlike in the review (UC-13), because the summary compares no students. If the fallback also fails, the window says that the summary failed, and the transcript stays.
 8. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
 
 **Outcome:** a transcript and a summary on the lecturer's computer, about two hours after the lesson.
@@ -335,7 +335,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 1. **A link that cannot be downloaded** (a private repository, or a wrong link): the report for that link says so, and the review continues with the next link.
 2. **A large repository:** files that did not fit in the bundle are listed at its end. The review is told not to treat them as missing.
 3. **The daily free quota runs out** (20 requests): the review stops, and continues the next day with the same model, so that every submission is reviewed by the same model.
-4. **The model is busy** (error 503): the system waits and tries again, at most three times in all. After that, the submission is marked as failed, and the system continues with the next one.
+4. **The model is busy** (error 503): the system tries again, at most three times in all, and waits longer before each new try: 30 seconds, then 60 seconds. After that, the submission is marked as failed, and the system continues with the next one. The review never switches to another model, so that every submission is reviewed by the same model, and the ranking stays fair.
 5. **The Gemini API is not available:** the manual engine writes the request to a file, and the lecturer pastes it into a free LLM chat.
 6. **The review misses a problem, or invents one:** every report says that it supports a human grader and does not replace one, and what it could not check.
 

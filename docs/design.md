@@ -554,7 +554,7 @@ sequenceDiagram
     W->>L: "Send to Gemini?"
     alt lecturer clicks OK
         W->>Su: summarize(transcript)
-        loop at most 3 tries
+        loop at most 3 tries, wait 30 s then 60 s
             Su->>E: ask(prompt, transcript)
             E->>G: request
             G-->>E: summary
@@ -591,7 +591,7 @@ sequenceDiagram
         R->>B: bundle(link, "Repo A")
         B-->>R: bundle
         R->>E: ask(prompt, bundle)
-        E->>G: request, at most 3 tries
+        E->>G: request, at most 3 tries,<br/>wait 30 s then 60 s
         G-->>E: review
         E-->>R: review + scores
     end

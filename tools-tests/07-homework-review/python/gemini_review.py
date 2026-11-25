@@ -1,17 +1,19 @@
-"""Send a review prompt and repository bundles to the Gemini API (free tier).
+"""Send a prompt and text files (repository bundles, or a transcript) to the Gemini API (free tier).
 
 Usage:
-    python gemini_review.py <model> <prompt.md> <bundle1.txt> [<bundle2.txt> ...]
+    python gemini_review.py <model> <prompt.md> <file1.txt> [<file2.txt> ...] [--out <answer.md>]
 
-Example:
+Examples:
     python gemini_review.py gemini-4-hydrogen ../review_prompt.md repo-a-bundle.txt repo-b-bundle.txt
+    python gemini_review.py gemini-4-hydrogen summary_prompt.md transcript.txt --out summary.md
 
 The API key is read from secrets/gemini_api_key.txt (blocked by .gitignore).
-The answer is saved to course-materials/homework-review/ and is not printed.
+The answer is saved to --out if given, otherwise to
+course-materials/homework-review/gemini-review-<model>.md. It is not printed.
 Printed: the time of the request and the token counts the API returns.
 
 Note: on the free tier, Google uses the content to improve its products.
-Send only public repositories, under anonymous names.
+Send only public repositories under anonymous names, or a transcript the lecturer approved.
 """
 import pathlib
 import sys
@@ -34,10 +36,19 @@ def build_contents(prompt_file, bundle_files):
 
 
 def main():
-    if len(sys.argv) < 4:
+    args = sys.argv[1:]
+    out_path = None
+    if "--out" in args:
+        i = args.index("--out")
+        if i + 1 >= len(args):
+            print(__doc__)
+            sys.exit(1)
+        out_path = pathlib.Path(args[i + 1])
+        del args[i:i + 2]
+    if len(args) < 3:
         print(__doc__)
         sys.exit(1)
-    model, prompt_file, bundles = sys.argv[1], sys.argv[2], sys.argv[3:]
+    model, prompt_file, bundles = args[0], args[1], args[2:]
 
     client = genai.Client(api_key=KEY_FILE.read_text(encoding="utf-8").strip())
     contents = build_contents(prompt_file, bundles)
@@ -53,8 +64,8 @@ def main():
           f"| thinking: {u.thoughts_token_count} | total: {u.total_token_count}")
     print(f"model version (from the API): {response.model_version}")
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUT_DIR / f"gemini-review-{model}.md"
+    out = out_path or OUT_DIR / f"gemini-review-{model}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(response.text or "", encoding="utf-8")
     print(f"answer saved: {out} ({len(response.text or ''):,} characters, {len((response.text or '').split()):,} words)")
 

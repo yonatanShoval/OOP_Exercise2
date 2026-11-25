@@ -49,7 +49,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 - [x] 5. SRS: [docs/srs.md](docs/srs.md)
 - [x] 6. Use cases: [docs/use-cases.md](docs/use-cases.md)
 - [x] 7. Main software components: [docs/components.md](docs/components.md)
-- [ ] 8. Class diagrams and sequence diagrams
+- [x] 8. Class diagrams and sequence diagrams: [docs/design.md](docs/design.md)
 - [ ] 9. Testing strategy
 - [ ] 10. Demo web app
 - [ ] 11. Demo in class

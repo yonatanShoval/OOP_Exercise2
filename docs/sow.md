@@ -146,7 +146,7 @@ The work is done when all of the following are true:
    - a challenge,
    - the lecturer's decision,
    - the spreadsheet.
-3. Features 2–5 are each shown working at least once in the live demo. The live demo is the main proof. A recorded run, linked from the README, is a backup only.
+3. Features 2–5 are each shown working at least once in the demo. Features that run only on the computer and in Firebase are shown live. Features that depend on Gemini (the summary and the homework review) are not run live in class, because the free tier can be busy (error 503) for minutes at a time: they are run before the lesson, and the saved results are shown in class. A recorded run, linked from the README, is the backup.
 4. No secret key, class photo, recording or real student data is in the repository.
 5. Every requirement in the SRS links to a use case and to a test.
 
