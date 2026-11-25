@@ -50,7 +50,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 - [x] 6. Use cases: [docs/use-cases.md](docs/use-cases.md)
 - [x] 7. Main software components: [docs/components.md](docs/components.md)
 - [x] 8. Class diagrams and sequence diagrams: [docs/design.md](docs/design.md)
-- [ ] 9. Testing strategy
+- [x] 9. Testing strategy: [docs/testing.md](docs/testing.md)
 - [ ] 10. Demo web app
 - [ ] 11. Demo in class
 - [ ] 12. Summary of results
