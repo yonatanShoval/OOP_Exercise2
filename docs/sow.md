@@ -108,9 +108,13 @@ The review supports a human grader and does not replace one.
 - **Loading the page with no network** (no Service Worker / PWA).
 - **Teaching-quality analysis** of the lecture, for example language mistakes or voice quality.
 - **Student accounts and sign-in.**
-- **Personal information in the cloud:**
+- **Personal information in the cloud, beyond what the demo needs:**
   - The real participant list stays on the lecturer's computer.
   - Tests use invented data only.
+  - In the live demo, the real course list is used, because the demo must be real, in this class. Each student checks in with their own course email. Three safeguards apply:
+    1. The phones cannot read check-ins. Only Python can.
+    2. The lesson's data is deleted from the cloud after the lesson.
+    3. The sheet with the names is kept only as a file on the lecturer's computer, never in Google Sheets.
 
 ## 7. Assumptions and constraints
 

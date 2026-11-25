@@ -37,7 +37,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 ## Out of scope
 
 - No integration with Moodle or Zoom. Files are uploaded by hand.
-- No personal information about students.
+- No personal information about students in the cloud, beyond the course email used to check in during the live demo. It is deleted from the cloud after the lesson, and the sheet with names stays only on the lecturer's computer.
 - Only features that can be shown working in a 10-minute live demo in class.
 
 ## Progress

@@ -103,9 +103,10 @@ flowchart TB
 | An answer after the poll's `closes_at` | create | **denied** (FR-8.6) |
 | A challenge answer after the challenge is closed | create | **denied** (FR-5.4) |
 | Changing or deleting any record | update, delete | **denied** (NFR-12) |
+| Reading check-ins from a phone | read | **denied** (NFR-12): the emails are read only by Python |
 | Any other collection | read, create | **denied** |
 
-**Example with numbers:** 8 cases. Each one runs once with no key, and then once with the key. Expected: with no key, 1 is allowed and 7 are denied. With the key, all 8 pass, which shows why the key must not be used for this test.
+**Example with numbers:** 9 cases. Each one runs once with no key, and then once with the key. Expected: with no key, 1 is allowed and 8 are denied. With the key, all 9 pass, which shows why the key must not be used for this test.
 
 ## 6. One end-to-end run
 
@@ -147,14 +148,18 @@ Each use case passes when its happy path and every edge case behave as the use c
 - [ ] The review of the chosen links is ready: one report per link, the ranking sheet, and the class comparison.
 - [ ] The recorded backup run is linked from the README.
 - [ ] Both keys are in `secrets/`, and `git status` shows no secrets.
-- [ ] The course list for the demo is decided (Q11: real emails or invented ones).
+- [ ] The real course list is loaded from the local `.xlsx` file. The demo must be real, in this class, so each student checks in with their own course email (D49).
+- [ ] The deployed security rules block phones from reading check-ins.
 - [ ] The laptop is connected to the projector, and the page opens on a phone.
 
 **Live in class:**
 - [ ] Students check in from their phones with the code on the projector.
 - [ ] A **new** photo of the class is counted. The count is within ±10% of a quick manual count (NFR-3).
 - [ ] A mismatch alert appears, and a challenge runs on the projector only.
-- [ ] The lecturer decides, and the sheet is written.
+- [ ] The lecturer decides, and the sheet is written as a local `.xlsx` file only, not to Google Sheets.
+
+**After the lesson:**
+- [ ] The lesson is closed, and its data is deleted from Firestore (FR-1.5). A read with the key confirms that no check-in is left.
 - [ ] A comment and a 2-minute poll.
 - [ ] The saved summary and review results are shown.
 
@@ -182,6 +187,6 @@ Each use case passes when its happy path and every edge case behave as the use c
 
 - **Android phones:** only an iPhone with Chrome was tested.
 - **The head count on new photos:** the rule's thresholds were set on the lecturer's photos. The real test is the new photo in the demo.
-- **The Gemini summary:** on 25/11, 6 of 6 tries failed with error 503 (tools report, section 6). The fallback model `gemini-3.6-flash` has not been tried, and its free-tier limit has not been checked.
+- **The Gemini summary:** on 25/11, 6 of 6 tries failed with error 503 (tools report, section 6). The fallback model `gemini-3.6-flash` has not been tried yet. Its free-tier limits are 5 requests per minute and 20 per day (tools report, section 7).
 - **The QR code on a real projector:** it was tested only on a laptop screen, from up to 5 meters.
 - **Load:** a class of about 100 phones at once was not tested. Each request is small, and the free plan's daily limits are far above one lesson.

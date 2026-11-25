@@ -363,7 +363,8 @@ After the decision to make the summary automatic, we tried to send the same tran
 - **What it means for the design:**
   - Tries need a growing wait between them, because tries a few seconds apart do not help.
   - Features that depend on Gemini are not run live in class. They are run before the lesson, and the saved result is shown.
-  - For the summary, which compares no students, a fallback model is allowed after three failed tries: `gemini-3.6-flash`. The review stays on one model, for fairness.
+  - For the summary, which compares no students, a fallback model is allowed after three failed tries: `gemini-3.6-flash`. Its free-tier limits are 5 requests per minute, about 250K tokens per minute, and 20 requests per day (section 7). It has not been tried yet. The review stays on one model, for fairness.
+- **Next:** the test will be tried again on the morning of 26/11.
 
 ### Problems and fixes
 
@@ -415,6 +416,7 @@ Test code:
 |---|---|---|---|
 | `gemini-4-hydrogen` | 5 | about 250K | 20 |
 | `gemini-3.5-flash-lite` | 15 | about 250K | 500 |
+| `gemini-3.6-flash` (the summary's fallback model, limits checked later) | 5 | about 250K | 20 |
 
 Most other models show a limit of 0, which means they are not available on the free tier. On the free tier, Google uses the content to improve its products. We accept this here, because the repositories are public and are sent under anonymous names.
 

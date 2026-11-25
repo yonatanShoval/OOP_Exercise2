@@ -80,6 +80,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-1.2 | The lecturer opens a new lesson. The system creates a lesson record in the database, with the date and the server time. |
 | FR-1.3 | Every check-in, comment and poll is saved under its lesson. The phone page knows the lesson from the link that the code opens. |
 | FR-1.4 | The course list itself is not uploaded to the cloud. The system uses it only on the lecturer's computer. |
+| FR-1.5 | After the lesson, when the sheet has been written, the lecturer closes the lesson. The system then deletes the lesson's data from the cloud: the codes, the check-ins with their emails, and the challenge answers. |
 
 ### 3.2 Attendance: check-in (UC-2)
 
@@ -130,7 +131,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-6.1 | For every open mismatch, the lecturer marks each student involved as present or absent. Rare edge cases are always left to the lecturer. |
 | FR-6.2 | The system writes the attendance to a spreadsheet: one row per student, with the name, email and group, and one column per lesson with the status. |
 | FR-6.3 | The spreadsheet can be an offline `.xlsx` file on the lecturer's computer (openpyxl), or an online Google Sheet (gspread). |
-| FR-6.4 | Only invented data is written to Google Sheets in tests and in the demo. |
+| FR-6.4 | Only invented data is written to Google Sheets. A sheet with real names is kept only as an `.xlsx` file on the lecturer's computer, also in the demo. |
 
 ### 3.7 Comments and suggestions (UC-7, UC-8)
 
@@ -196,9 +197,9 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | NFR-7 | Performance | A review of one repository takes under a minute. 20 requests can be sent per day: one per repository, plus one for the class comparison. | Measured: 21.8 s per request. The free quota is 20 requests per day (section 7). |
 | NFR-8 | Reliability | A comment written with no network is not lost. | Tested: it arrives after the network returns, even after the browser is closed (section 1). |
 | NFR-9 | Privacy | The class photo and the recording never leave the lecturer's computer. No face recognition is done. | Design (D8). |
-| NFR-10 | Privacy | Real student data is kept only on the lecturer's computer. Tests and the demo use invented data in the cloud. Comments and poll answers are anonymous. | Design (D30, D37). |
+| NFR-10 | Privacy | The real course list and the sheet with names are kept only on the lecturer's computer. Tests use invented data. In the live demo, students check in with their real course email, so emails reach Firestore for the length of the lesson only. The phones cannot read check-ins, and the lesson's data is deleted from the cloud after the lesson (FR-1.5). Comments and poll answers are anonymous. | Design (D30, D37, D49). |
 | NFR-11 | Privacy | Only two kinds of text are sent to the Gemini API: public repositories, under anonymous names, and a lesson transcript, only after the lecturer confirms. On the free tier, Google uses the content to improve its products. | Accepted (D38, D42). |
-| NFR-12 | Security | The database rules allow only the fields each record needs, with the server time. They never allow a client to update or delete. Everything else is blocked. | Tested on the test collection (section 1). |
+| NFR-12 | Security | The database rules allow only the fields each record needs, with the server time. They never allow a client to update or delete, and never allow a phone to read check-ins: only Python reads them. Everything else is blocked. | Tested on the test collection (section 1). |
 | NFR-13 | Security | The service account key and the two Gemini keys (one for the review, one for the summary, each in its own Google project) are kept in `secrets/`, which is blocked by `.gitignore`. They never enter git. | Checked before each commit. |
 | NFR-14 | Cost | Running the system costs nothing. | Free plans only. |
 | NFR-15 | Portability | The student page works in a phone browser. | Tested on an iPhone with Chrome. Android was not tested. |

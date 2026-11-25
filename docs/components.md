@@ -185,7 +185,7 @@ flowchart TB
 | **What it does** | It stores the lessons and everything under them, and pushes each change to whoever is listening, in real time. |
 | **Where it runs** | Cloud Firestore, region `me-west1`, production mode. |
 | **Structure** | One record per lesson. Under it: rotating codes, check-ins, challenge answers, comments, polls and their answers. |
-| **Security rules** | Everything not allowed is blocked. The phone may only create records, never update or delete them. Each record may have only its own fields, with the server time. A comment is accepted only when comments are open for the lesson (FR-7.3). A poll answer is accepted only while the poll is open (FR-8.6). A challenge answer is accepted only while the challenge is open (FR-5.4). |
+| **Security rules** | Everything not allowed is blocked. The phone may only create records, never update or delete them. The phone can never read check-ins, which hold emails: only Python reads them, through C8. Each record may have only its own fields, with the server time. A comment is accepted only when comments are open for the lesson (FR-7.3). A poll answer is accepted only while the poll is open (FR-8.6). A challenge answer is accepted only while the challenge is open (FR-5.4). |
 | **Important** | The rules apply to the phone, not to Python. Python uses the service account, which bypasses the rules (see C8). |
 | **Requirements** | FR-1.2, FR-1.3, FR-2.2, FR-2.5, FR-5.4, FR-7.2, FR-7.3, FR-8.6, NFR-12 |
 | **Tested base** | `tools-tests/01-infrastructure/firestore.rules` |
