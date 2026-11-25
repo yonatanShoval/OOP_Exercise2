@@ -79,7 +79,8 @@ The assignment defines five features. Attendance is the main one.
 ### Feature 4: Lecture summary
 - The lecturer downloads the class recording and gives it to the system by hand.
 - The recording is transcribed on the lecturer's computer (faster-whisper).
-- A summary is made from the transcript with an LLM chat.
+- The summary is automatic, through the Gemini API, with the same engine interface (`ReviewEngine`) and the same manual backup as the homework review.
+- Before the transcript is sent, the lecturer's window asks the lecturer to confirm, because the transcript may hold names and voices of students, and on the free tier Google uses the content. If the lecturer does not confirm, the transcript stays on the lecturer's computer.
 - The transcript and the summary stay with the lecturer. The lecturer can share them through the channel they already use.
 
 ### Feature 5: Homework review
@@ -114,7 +115,7 @@ The review supports a human grader and does not replace one.
 ## 7. Assumptions and constraints
 
 - **Free accounts only:** Firebase Spark plan, the free Google Sheets API, the Gemini API free tier, and a free LLM chat.
-- **Data on the Gemini free tier:** Google uses the content to improve its products. We accept this, because only public repositories are sent. No student names are sent: the repositories get anonymous names.
+- **Data on the Gemini free tier:** Google uses the content to improve its products. For the homework review, we accept this, because only public repositories are sent, under anonymous names. For the lecture summary, the transcript may hold students' names and voices, so it is sent only after the lecturer confirms.
 - **Network:** there is a network in the classroom. Check-in and polls need it.
 - **One computer:** the lecturer's computer runs all the logic in Python. The class photo and the recording never leave it.
 - **Phones:** the student needs only a phone browser and a camera to scan a QR code.

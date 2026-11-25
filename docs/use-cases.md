@@ -29,7 +29,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 | UC-9 | Open a poll | Polls | Lecturer | FR-8.1–8.3 |
 | UC-10 | Answer a poll | Polls | Student | FR-8.3–8.5 |
 | UC-11 | Close a poll and see the results | Polls | Lecturer | FR-8.6, 8.7 |
-| UC-12 | Get a lecture summary | Summary | Lecturer | FR-9.x |
+| UC-12 | Get a lecture summary | Summary | Lecturer, Gemini API | FR-9.x |
 | UC-13 | Review homework | Homework review | Lecturer, Student | FR-10.x |
 
 ---
@@ -284,21 +284,25 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 
 **Story:** As a lecturer, I want a transcript and a summary of my recorded lesson, so that I have useful notes after the lesson.
 
-**Preconditions:** the lecturer downloaded the class recording by hand from Zoom, Meet or Google Classroom.
+**Preconditions:** the lecturer downloaded the class recording by hand from Zoom, Meet or Google Classroom. A free Gemini key in `secrets/`.
 
 **Happy path:**
 1. The lecturer chooses the recording in the window.
 2. The system transcribes it on the lecturer's computer. For a lesson of about an hour and a half, this takes about an hour and three quarters.
 3. The system saves the transcript as a text file.
-4. The lecturer gives the transcript to an LLM chat, and saves the summary next to it.
-5. The lecturer shares the summary with the students through the channel they already use, if they want to.
+4. The window asks: "Send the transcript to Gemini for a summary?" It explains that the transcript may hold names and voices of students, and that on the free tier Google uses the content.
+5. The lecturer clicks "OK".
+6. The system sends the transcript through `ReviewEngine` to the Gemini API, and saves the summary next to the transcript.
+7. The lecturer shares the summary with the students through the channel they already use, if they want to.
 
 **Edge cases:**
 1. **Silence in the recording:** the model may invent words, as in the test ("thank you", four times). The lecturer checks the transcript.
 2. **The first seconds are missed:** in the test, the first 30 seconds were missing. The lecturer checks the start.
 3. **A file type that cannot be read:** the window shows an error.
-4. **Names of students in the recording:** the recording stays on the computer, but the transcript is sent to the chat. The lecturer checks it before sending.
-5. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
+4. **The lecturer does not confirm** (for example, students' names appear in the transcript): nothing is sent. The transcript stays on the lecturer's computer. The lecturer can still use the manual backup and paste it into an LLM chat by their own choice.
+5. **The daily free quota has run out** (the review uses the same 20 requests): the summary is sent the next day.
+6. **The model is busy** (error 503): the system tries again, at most three times in all. After that, the window says that the summary failed, and the transcript stays.
+7. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
 
 **Outcome:** a transcript and a summary on the lecturer's computer, about two hours after the lesson.
 

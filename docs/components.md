@@ -29,31 +29,31 @@ Each diagram has at most eight components. Under each one there is a short expla
 ## 2. Overview: where everything runs
 
 ```mermaid
-flowchart LR
-    subgraph Phone["Student's phone"]
-        P["C1 Student page"]
+flowchart TB
+    subgraph Phone["Phone"]
+        P["C1<br/>Student<br/>page"]
     end
-    subgraph Cloud["Cloud, free plans"]
-        H["C2 Hosting"]
-        DB[("C3 Database<br/>Firestore")]
-        GS["C4 Google Sheets"]
-        GM["C5 Gemini API"]
+    subgraph Cloud["Cloud"]
+        H["C2<br/>Hosting"]
+        DB[("C3<br/>Database")]
+        GS["C4<br/>Google<br/>Sheets"]
+        GM["C5<br/>Gemini<br/>API"]
     end
-    subgraph PC["Lecturer's computer"]
-        W["C6 Lecturer's window"]
-        PY["C7 to C16<br/>Python logic"]
-        F[("Local files")]
+    subgraph PC["Lecturer's PC"]
+        W["C6<br/>Window"]
+        PY["C7 to C16<br/>Python<br/>logic"]
+        F[("Local<br/>files")]
     end
-    H -- "serves the page" --> P
-    P -- "sends check-ins,<br/>comments, answers" --> DB
-    DB -- "pushes changes" --> PY
-    W -- "button clicks" --> PY
-    PY -- "writes the sheet" --> GS
-    PY -- "sends bundles" --> GM
-    PY -- "reads photos,<br/>saves reports" --> F
+    H -- "serves<br/>page" --> P
+    P -- "sends<br/>data" --> DB
+    DB -- "pushes<br/>changes" --> PY
+    W -- "clicks" --> PY
+    PY -- "writes<br/>sheet" --> GS
+    PY -- "sends<br/>texts" --> GM
+    PY -- "reads,<br/>saves" --> F
 ```
 
-**In plain words:** the phone gets the page from the cloud, and sends everything the student types to the database. It never talks to the lecturer's computer directly. The database pushes each new record to the Python logic on the lecturer's computer, in real time. The lecturer clicks buttons in the window, and the Python logic does the work: it reads the photos and the recordings from local files, writes the sheet, and sends the homework bundles to Gemini.
+**In plain words:** the phone gets the page from the cloud, and sends everything the student types to the database. It never talks to the lecturer's computer directly. The database pushes each new record to the Python logic on the lecturer's computer, in real time. The lecturer clicks buttons in the window, and the Python logic does the work: it reads the photos and the recordings from local files, writes the sheet, and sends texts to Gemini: the homework bundles, and the lesson transcript after the lecturer confirms.
 
 **Example with numbers:** 50 students check in during a lesson. That is 50 records that go from 50 phones to the database. The database pushes the 50 records to Python, one by one, about 3 to 4 seconds after each was sent (tools report, section 1). The class photo goes nowhere: Python reads it from a local file, and only the number, for example 30, is used later.
 
@@ -62,23 +62,23 @@ flowchart LR
 ### 3.1 Attendance
 
 ```mermaid
-flowchart LR
-    P["C1 Student page"]
-    DB[("C3 Database")]
-    G["C8 Database gateway"]
-    K["C9 Check-in"]
-    HC["C10 Head counter"]
-    A["C11 Attendance"]
-    W["C6 Lecturer's window"]
-    S["C12 Sheet writer"]
-    P -- "check-in:<br/>email + code" --> DB
-    DB -- "new check-ins" --> G
-    G -- "check-in records" --> K
-    K -- "accepted check-ins,<br/>unknown emails" --> A
-    HC -- "head count, boxes" --> A
-    A -- "mismatch alerts,<br/>challenge lists" --> W
-    W -- "lecturer's decisions" --> A
-    A -- "final status<br/>per student" --> S
+flowchart TB
+    P["C1<br/>Student<br/>page"]
+    DB[("C3<br/>Database")]
+    G["C8<br/>Database<br/>gateway"]
+    K["C9<br/>Check-in"]
+    HC["C10<br/>Head<br/>counter"]
+    A["C11<br/>Attendance"]
+    W["C6<br/>Window"]
+    S["C12<br/>Sheet<br/>writer"]
+    P -- "email,<br/>code" --> DB
+    DB -- "new<br/>check-ins" --> G
+    G -- "records" --> K
+    K -- "accepted,<br/>unknown" --> A
+    HC -- "count,<br/>boxes" --> A
+    A -- "alerts,<br/>lists" --> W
+    W -- "decisions" --> A
+    A -- "final<br/>status" --> S
 ```
 
 **In plain words:** the student checks in from the phone, and the check-in goes to the database. The gateway (C8) is the only Python part that reads the database, and it passes the check-ins to C9. C9 throws out check-ins with an old code, and marks emails that are not on the course list. Separately, the head counter (C10) counts the people in the photos. The attendance component (C11) puts the two numbers side by side. If they differ, it sends a mismatch alert to the window. The lecturer decides, and C11 gives the final status of each student to the sheet writer (C12).
@@ -97,22 +97,22 @@ flowchart LR
 ### 3.2 Comments and polls
 
 ```mermaid
-flowchart LR
-    P["C1 Student page"]
-    DB[("C3 Database<br/>+ security rules")]
-    G["C8 Database gateway"]
-    M["C13 Comments"]
-    Q["C14 Polls"]
-    W["C6 Lecturer's window"]
-    S["C12 Sheet writer"]
-    P -- "comment,<br/>poll answer" --> DB
-    DB -- "new records" --> G
+flowchart TB
+    P["C1<br/>Student<br/>page"]
+    DB[("C3<br/>Database<br/>+ rules")]
+    G["C8<br/>Database<br/>gateway"]
+    M["C13<br/>Comments"]
+    Q["C14<br/>Polls"]
+    W["C6<br/>Window"]
+    S["C12<br/>Sheet<br/>writer"]
+    P -- "comment,<br/>answer" --> DB
+    DB -- "new<br/>records" --> G
     G -- "comments" --> M
     G -- "answers" --> Q
-    Q -- "opens, closes poll" --> G
-    M -- "shows comments" --> W
-    Q -- "shows results" --> W
-    M -- "comments at<br/>end of lesson" --> S
+    Q -- "opens,<br/>closes" --> G
+    M -- "shows" --> W
+    Q -- "results" --> W
+    M -- "end of<br/>lesson" --> S
 ```
 
 **In plain words:** comments and poll answers travel the same way: from the phone to the database, and from there through the gateway to Python. The security rules in the database are the guard. They reject a comment when comments are closed, and an answer when the poll is closed. Comments (C13) are shown to the lecturer as they arrive, and are written to the sheet at the end of the lesson. Polls (C14) also write to the database: they open and close the poll there.
@@ -124,28 +124,29 @@ flowchart LR
 ### 3.3 Lecture summary and homework review
 
 ```mermaid
-flowchart LR
-    W["C6 Lecturer's window"]
-    T["C15 Transcriber"]
-    REC[("Recording and<br/>transcript files")]
-    CH["LLM chat<br/>by hand"]
-    R["C16 Homework review"]
-    GH["GitHub<br/>public repositories"]
-    GM["C5 Gemini API"]
-    REP[("Reports and<br/>ranking sheet")]
-    W -- "choose recording" --> T
-    T -- "reads recording,<br/>saves transcript" --> REC
-    REC -- "lecturer pastes<br/>transcript" --> CH
-    W -- "choose links file" --> R
+flowchart TB
+    W["C6<br/>Window"]
+    T["C15<br/>Transcriber<br/>+ summary"]
+    REC[("Recording,<br/>transcript,<br/>summary")]
+    GM["C5<br/>Gemini<br/>API"]
+    R["C16<br/>Homework<br/>review"]
+    GH["GitHub<br/>repos"]
+    REP[("Reports,<br/>ranking")]
+    W -- "recording,<br/>OK to send" --> T
+    T -- "reads,<br/>saves" --> REC
+    T -- "transcript,<br/>if OK" --> GM
+    W -- "links<br/>file" --> R
     R -- "downloads" --> GH
-    R -- "sends bundle,<br/>gets review" --> GM
+    R -- "bundles" --> GM
     R -- "saves" --> REP
 ```
 
-**In plain words:** these two features run after the lesson, and both start from the window. The transcriber (C15) turns the recording into text on the lecturer's computer, and the lecturer makes the summary in an LLM chat, by hand. The homework review (C16) downloads each repository from GitHub, packs it, sends it to Gemini, and saves the reports. It never sends a name or a link, only "Repo A", "Repo B", and so on.
+**In plain words:** these two features run after the lesson, and both start from the window. Both use Gemini through the same engine interface (`ReviewEngine`), with the same manual backup.
+- **Summary (C15):** C15 turns the recording into text on the lecturer's computer. Before the transcript is sent, the window asks the lecturer to confirm, because the transcript may hold names and voices of students, and on the free tier Google uses the content. Only after "OK" does C15 send the transcript to Gemini and save the summary. If the lecturer does not confirm, the transcript stays on the computer.
+- **Review (C16):** C16 downloads each repository from GitHub, packs it, sends it to Gemini, and saves the reports. It never sends a name or a link, only "Repo A", "Repo B", and so on.
 
 **Example with numbers:**
-- **Summary:** a 90-minute recording. The measured speed was 66.5 seconds of work per minute of recording, so the transcript takes about 100 minutes. The summary is ready about two hours after the lesson.
+- **Summary:** a 90-minute recording. The measured speed was 66.5 seconds of work per minute of recording, so the transcript takes about 100 minutes. The window then asks: "Send the transcript to Gemini?" The lecturer clicks "OK", and the summary comes back in one request, out of the 20 requests per day that the review also uses. The summary is ready about two hours after the lesson. If the lecturer clicks "No", nothing is sent, and the lecturer has the transcript only.
 - **Review:** a links file with 45 repositories. One request per repository takes about 22 seconds. The free quota is 20 requests per day:
   - Day 1: repositories 1–20.
   - Day 2: repositories 21–40.
@@ -202,8 +203,8 @@ flowchart LR
 
 | | |
 |---|---|
-| **What it does** | It reviews a bundle, and writes the class comparison. |
-| **Talks to** | Only C16, with the Gemini key from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day. |
+| **What it does** | It reviews a bundle, writes the class comparison, and summarizes a lesson transcript. |
+| **Talks to** | Only C15 and C16, through `ReviewEngine`, with the Gemini key from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day, shared by the summary and the review. |
 | **Note** | On the free tier, Google uses the content to improve its products. Only public repositories are sent, under anonymous names. |
 | **Requirements** | FR-10.4, FR-10.9, NFR-11 |
 | **Tested base** | `tools-tests/07-homework-review/python/gemini_review.py` |
@@ -294,15 +295,15 @@ All of these are Python classes. The lecturer uses only C6.
 | **Requirements** | FR-8.1, FR-8.2, FR-8.6, FR-8.7 |
 | **Tested base** | `tools-tests/01-infrastructure/` (the same real-time flow as comments). Google Forms was tested only as a comparison (tools report, section 5). |
 
-### C15: Transcriber
+### C15: Transcriber and summary
 
 | | |
 |---|---|
-| **What it does** | It transcribes a recording into a text file. The lecturer then makes the summary with an LLM chat, by hand. |
-| **Built with** | faster-whisper 1.2.1, model `large-v3-turbo`, int8, on the CPU. PyAV is pinned to 18.1.1. |
-| **Where it runs** | Only on the lecturer's computer. The recording is never sent to the cloud. |
-| **Requirements** | FR-9.1 to FR-9.5, NFR-6 |
-| **Tested base** | `tools-tests/06-transcription/python/transcribe.py` |
+| **What it does** | It transcribes a recording into a text file. Then it asks the lecturer, in the window, to confirm sending the transcript. After "OK", it sends the transcript through `ReviewEngine` and saves the summary next to the transcript. After "No", nothing is sent. |
+| **Built with** | faster-whisper 1.2.1, model `large-v3-turbo`, int8, on the CPU. PyAV is pinned to 18.1.1. The summary uses the same `ReviewEngine` as C16: Gemini, or the manual backup. |
+| **Where it runs** | On the lecturer's computer. The recording is never sent to the cloud. The transcript is sent only after the lecturer confirms. |
+| **Requirements** | FR-9.1 to FR-9.7, NFR-6, NFR-9, NFR-11 |
+| **Tested base** | `tools-tests/06-transcription/python/transcribe.py`; `tools-tests/07-homework-review/python/gemini_review.py` (the same Gemini call) |
 
 ### C16: Homework review
 
@@ -326,7 +327,7 @@ All of these are Python classes. The lecturer uses only C6.
 | FR-6 Decision and sheet | C6, C11, C12, C4 |
 | FR-7 Comments | C1, C3, C6, C13, C12 |
 | FR-8 Polls | C1, C3, C6, C14 |
-| FR-9 Summary | C6, C15 |
+| FR-9 Summary | C6, C15, C5 |
 | FR-10 Homework review | C6, C16, C5 |
 
 ## 8. Rules that hold for all components
@@ -335,7 +336,7 @@ All of these are Python classes. The lecturer uses only C6.
 - **One door to the database.** Only C8 talks to Firestore from Python. This keeps the other components testable with `FakeDatabase`.
 - **Two implementations behind one interface** where an outside service may fail or change:
   - `SheetWriter`: xlsx or Google Sheets.
-  - `ReviewEngine`: Gemini or manual.
+  - `ReviewEngine`: Gemini or manual. Both the summary (C15) and the review (C16) use it.
   - `Database`: Firestore or fake.
 - **Private data stays local.** The photos, the recordings and the real course list stay on the lecturer's computer.
-- **Secrets stay in `secrets/`.** The service account key and the Gemini key are read only by C8, C12 and C16, and never enter git.
+- **Secrets stay in `secrets/`.** The service account key and the Gemini key are read only by C8, C12, C15 and C16, and never enter git.

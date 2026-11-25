@@ -32,7 +32,7 @@ The client stories are in the use cases ([use-cases.md](use-cases.md)). The evid
 | **Box** | A frame that the model draws around one person in the photo. Each box has a number. |
 | **Lecturer's window** | A simple desktop window in Python (tkinter) on the lecturer's computer. The lecturer runs everything from it and writes no code. |
 | **Bundle** | One text file that holds one repository: its file tree, and then its text files. |
-| **ReviewEngine** | The interface of the homework review. It has two implementations: Gemini (automatic, the main one) and manual (the backup). |
+| **ReviewEngine** | The interface that sends a text to an LLM and returns its answer. The homework review and the lecture summary both use it. It has two implementations: Gemini (automatic, the main one) and manual (the backup). |
 
 ## 2. Overall description
 
@@ -162,8 +162,10 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-9.1 | The lecturer chooses a class recording, an audio or video file downloaded by hand from Zoom or a similar tool. |
 | FR-9.2 | Python transcribes the recording on the lecturer's computer (faster-whisper, model `large-v3-turbo`). The recording is not sent to any cloud service. |
 | FR-9.3 | The transcript is saved as a text file on the lecturer's computer. |
-| FR-9.4 | A summary is made from the transcript with an LLM chat, and saved next to the transcript. |
-| FR-9.5 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. |
+| FR-9.4 | Before anything is sent, the window asks the lecturer to confirm sending the transcript. It explains why: the transcript may hold names and voices of students, and on the free tier Google uses the content to improve its products. |
+| FR-9.5 | If the lecturer confirms, the system sends the transcript through the `ReviewEngine` interface, the same as the homework review. The main implementation is the Gemini API (`gemini-4-hydrogen`). The summary is saved next to the transcript. |
+| FR-9.6 | If the lecturer does not confirm, nothing is sent, and the transcript stays on the lecturer's computer. The backup is the manual engine: the lecturer can paste the transcript into an LLM chat by their own choice. |
+| FR-9.7 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. The summary uses the same daily quota and the same retry rule as the review: at most three tries, and when the quota runs out, it continues the next day. |
 
 ### 3.10 Homework review (UC-13)
 
@@ -195,7 +197,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | NFR-8 | Reliability | A comment written with no network is not lost. | Tested: it arrives after the network returns, even after the browser is closed (section 1). |
 | NFR-9 | Privacy | The class photo and the recording never leave the lecturer's computer. No face recognition is done. | Design (D8). |
 | NFR-10 | Privacy | Real student data is kept only on the lecturer's computer. Tests and the demo use invented data in the cloud. Comments and poll answers are anonymous. | Design (D30, D37). |
-| NFR-11 | Privacy | Only public repositories are sent to the Gemini API, under anonymous names. On the free tier, Google uses the content to improve its products. | Accepted (D38). |
+| NFR-11 | Privacy | Only two kinds of text are sent to the Gemini API: public repositories, under anonymous names, and a lesson transcript, only after the lecturer confirms. On the free tier, Google uses the content to improve its products. | Accepted (D38, D42). |
 | NFR-12 | Security | The database rules allow only the fields each record needs, with the server time. They never allow a client to update or delete. Everything else is blocked. | Tested on the test collection (section 1). |
 | NFR-13 | Security | The service account key and the Gemini key are kept in `secrets/`, which is blocked by `.gitignore`. They never enter git. | Checked before each commit. |
 | NFR-14 | Cost | Running the system costs nothing. | Free plans only. |
@@ -232,6 +234,6 @@ Every requirement links to a use case and to the tools report section where its 
 | FR-6.x | UC-6 | Section 4: `.xlsx` and Google Sheets |
 | FR-7.x | UC-7, UC-8 | Section 1: real time and no network; section 4: the sheet |
 | FR-8.x | UC-9, UC-10, UC-11 | Section 1: real time; section 5: Google Forms as a comparison |
-| FR-9.x | UC-12 | Section 6: faster-whisper and the summary |
+| FR-9.x | UC-12 | Section 6: faster-whisper and the summary; section 7: the Gemini API |
 | FR-10.x | UC-13 | Section 7: the bundles and the Gemini API |
 | NFR-1 to NFR-15 | All | See the evidence column in section 4 |
