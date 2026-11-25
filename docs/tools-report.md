@@ -359,7 +359,7 @@ Test code: `tools-tests/06-transcription/python/transcribe.py`
 
 - One clip of 4:43 minutes, one model, one computer. The estimate for a full lesson is linear, so silence and several speakers in a real lesson can change it.
 - Filtering out silence before transcription (faster-whisper has a `vad_filter` option) may prevent the invented words, but it was not tested.
-- The summary was made by hand in the chat. In the real system this step would need to be automated, and that was not tested.
+- In this test, the summary was made by hand in the chat. **Later decision:** in the system, the summary is automatic, through the Gemini API, after the lecturer confirms sending the transcript. The manual chat is only a backup. The Gemini call itself was tested in section 7, on the homework bundles, but not yet on a transcript.
 
 ### Conclusion
 
@@ -465,7 +465,7 @@ The Gemini API makes the review automatic and free, but in our single run it fou
 | Head count | YOLO26x @ 1280, local | Within 0 to 1 of the manual count, about 5 s per photo, with no cloud. A rule fixed students split by the desk. | YOLO26n missed about three quarters of the people. The rule's thresholds were set on these photos. | Count people, do not recognize them. The real test is on new photos. |
 | Attendance sheet | openpyxl (.xlsx) and gspread (Google Sheets) | An offline file that opens in Excel, and an online sheet written in a few seconds. | Only a small write was tested. | Real student data only in the local file. |
 | Existing poll tool | Google Forms | About 7 s and 3 taps for the student, with no sign-in. | Over a minute for the lecturer to create and publish a poll. | Our polls should make the lecturer's side fast. |
-| Lecture summary | faster-whisper (`large-v3-turbo`), local, + Claude chat | Hebrew transcribed locally, with English terms better than Zoom's transcript. The summary kept details that Zoom missed. | About 104 minutes of processing for a 94-minute lesson. Invented words over silence. A version clash with PyAV 19. | The summary is ready about two hours after the lesson. The transcript must be checked. |
+| Lecture summary | faster-whisper (`large-v3-turbo`), local, + the Gemini API after the lecturer confirms. The Claude chat, used in this test, is the backup. | Hebrew transcribed locally, with English terms better than Zoom's transcript. The chat summary kept details that Zoom missed. | About 104 minutes of processing for a 94-minute lesson. Invented words over silence. A version clash with PyAV 19. Gemini not yet tested on a transcript. | The summary is ready about two hours after the lesson. The transcript must be checked, and is sent only with the lecturer's OK. |
 | Homework review | Our packing script + the Gemini API (`gemini-4-hydrogen`, free tier). The Claude chat is the backup. | Claude chat: a review and ranking in about a minute, 3 of 3 checked claims found. Gemini: automatic and free, about 22 s per request. | Hydrogen found 1 of 3 claims, and Flash Lite found 0 and invented a result. One run per model. Hydrogen allows 20 requests per day. Large repositories lose files to the size budget. | List of links in, one report per link out, all with the same model. It supports a human grader and does not replace one. |
 
 Every tool in this table was tested hands-on, as described in its section.

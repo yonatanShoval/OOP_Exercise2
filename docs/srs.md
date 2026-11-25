@@ -164,7 +164,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-9.3 | The transcript is saved as a text file on the lecturer's computer. |
 | FR-9.4 | Before anything is sent, the window asks the lecturer to confirm sending the transcript. It explains why: the transcript may hold names and voices of students, and on the free tier Google uses the content to improve its products. |
 | FR-9.5 | If the lecturer confirms, the system sends the transcript through the `ReviewEngine` interface, the same as the homework review. The main implementation is the Gemini API (`gemini-4-hydrogen`). The summary is saved next to the transcript. |
-| FR-9.6 | If the lecturer does not confirm, nothing is sent, and the transcript stays on the lecturer's computer. The backup is the manual engine: the lecturer can paste the transcript into an LLM chat by their own choice. |
+| FR-9.6 | If the lecturer does not confirm, nothing is sent, and the transcript stays on the lecturer's computer. The manual engine is only a backup for when the Gemini API is not available, after the lecturer confirmed: it writes the request to a file, for the lecturer to paste into an LLM chat. |
 | FR-9.7 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. The summary uses its own Google project and key, separate from the review, because the free quota is per project, not per key. So it has its own 20 requests per day, and one summary per day is enough. It uses the same retry rule as the review: at most three tries. |
 
 ### 3.10 Homework review (UC-13)

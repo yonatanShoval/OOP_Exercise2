@@ -299,10 +299,11 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 1. **Silence in the recording:** the model may invent words, as in the test ("thank you", four times). The lecturer checks the transcript.
 2. **The first seconds are missed:** in the test, the first 30 seconds were missing. The lecturer checks the start.
 3. **A file type that cannot be read:** the window shows an error.
-4. **The lecturer does not confirm** (for example, students' names appear in the transcript): nothing is sent. The transcript stays on the lecturer's computer. The lecturer can still use the manual backup and paste it into an LLM chat by their own choice.
-5. **The daily free quota has run out:** the summary has its own Google project and key, with its own 20 requests per day, so the homework review does not use them up. One summary per day is enough. If the quota still runs out, the summary is sent the next day.
-6. **The model is busy** (error 503): the system tries again, at most three times in all. After that, the window says that the summary failed, and the transcript stays.
-7. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
+4. **The lecturer does not confirm** (for example, students' names appear in the transcript): nothing is sent, and there is no summary. The transcript stays on the lecturer's computer.
+5. **The Gemini API is not available** (after the lecturer confirmed): the manual backup writes the request to a file, and the lecturer pastes it into an LLM chat.
+6. **The daily free quota has run out:** the summary has its own Google project and key, with its own 20 requests per day, so the homework review does not use them up. One summary per day is enough. If the quota still runs out, the summary is sent the next day.
+7. **The model is busy** (error 503): the system tries again, at most three times in all. After that, the window says that the summary failed, and the transcript stays.
+8. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
 
 **Outcome:** a transcript and a summary on the lecturer's computer, about two hours after the lesson.
 
