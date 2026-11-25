@@ -105,6 +105,10 @@ The review supports a human grader and does not replace one.
 - **Rare edge cases:** they are not solved automatically. The lecturer decides by hand.
 - **Photos of different parts of the class**, which would need a sum of counts instead of the highest count.
 - **Face recognition:** the system only counts people and never identifies them.
+- **Taking the class photo inside the app** (a future idea): the lecturer takes it with the phone camera, and moves it to the computer in their usual way. Three in-app options were considered and rejected for now:
+  1. Upload to our cloud and delete at once: privacy, and Cloud Storage for Firebase needs the paid Blaze plan.
+  2. A direct transfer over the network: risky on a campus network.
+  3. The computer's camera: a poor angle for a lecture hall.
 - **Loading the page with no network** (no Service Worker / PWA).
 - **Teaching-quality analysis** of the lecture, for example language mistakes or voice quality.
 - **Student accounts and sign-in.**
@@ -159,7 +163,8 @@ The work is done when all of the following are true:
 | Risk | Effect | What we do |
 |---|---|---|
 | The head count is wrong on new photos. The double-count rule was tuned on 16 photos. | The lecturer gets false mismatch alerts. | The lecturer's target is ±10%. The challenge and the lecturer's decision catch the errors. The demo is the real test. |
-| The head count is slow. It took about 5.3 s per photo on a regular CPU. | The lecturer waits. | Photos are counted after they are taken, not live. |
+| The head count is slow. At 1920 it takes about 18 s per phone photo on a regular CPU. | The lecturer waits. | Photos are counted in the background, after they are taken; the window shows "Counting photo X of N" and does not freeze. |
+| The head count misses people in other kinds of photos. On low-resolution ceiling security-camera frames (SCUT-HEAD), no option met ±10%. | Wrong counts outside the phone-photo setting. | The system is meant for phone photos taken from the front. The challenge and the lecturer's decision catch errors. |
 | The transcript has errors. In the test, the model invented words over silence and missed the first 30 seconds. | The summary can be wrong. | The lecturer checks the summary. The summary is ready about 2 hours after the lesson. |
 | The rotating QR code is forwarded to someone at home. | There is a false check-in. | The code is valid for 60 seconds only. The head count and the challenge are the real check. |
 | The Gemini free tier allows only 20 requests per day, or it changes. | A hundred submissions take about five days. | The review continues the next day with the same model. If the API is not available, the manual engine is the backup. Both use the same `LlmEngine` interface. |

@@ -9,19 +9,22 @@ import queue
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 import qrcode
 from PIL import ImageTk
 
 from .attendance import AttendanceService
 from .checkin import CheckInService, ROTATE_SECONDS
+from .comments import CommentService
+from .polls import PollService, DEFAULT_DURATION_S
 from .course import Course
 from .headcount import HeadCounter
 from .lesson import Lesson
 from .xlsx_writer import XlsxSheetWriter
 
 CHECKIN_URL = "https://oop-exercise2.web.app/checkin.html"
+LESSON_URL = "https://oop-exercise2.web.app/lesson.html"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PRIVATE_DIR = REPO_ROOT / "course-materials"  # blocked by .gitignore
 SHEET_PATH = PRIVATE_DIR / "attendance" / "attendance.xlsx"
@@ -34,8 +37,12 @@ class LecturerWindow:
         self.counter = counter or HeadCounter()
         self.events = queue.Queue()
         self.course = self.lesson = self.checkins = self.attendance = None
+        self.comments = self.polls = None
+        self.poll_window = None
         self.checkin_on = False
         self.sheet_written = False
+        self.photo_paths = []  # this lesson's photos, deleted from the computer when the lesson closes
+        self.counting = False  # True while photos are counted in the background
 
         self.root = tk.Tk()
         self.root.title("Teaching Tool: lecturer")
@@ -49,16 +56,29 @@ class LecturerWindow:
             ("checkin", "3. Start check-in", self.toggle_checkin),
             ("photos", "4. Add class photos", self.add_photos),
             ("compare", "5. Compare", self.compare),
+            ("poll", "Open a poll", self.open_poll),
             ("sheet", "6. Write sheet (.xlsx)", self.write_sheet),
             ("close", "7. Close lesson", self.close_lesson),
         ]:
             self.btn[key] = tk.Button(buttons, text=text, command=command, font=FONT, width=24, anchor="w")
             self.btn[key].pack(pady=3)
 
+        tk.Label(buttons, text="Comments:", font=FONT, bg="white").pack(anchor="w", pady=(12, 0))
+        self.comment_mode = tk.StringVar(value="during")
+        self.mode_buttons = [
+            tk.Radiobutton(buttons, text=text, value=value, variable=self.comment_mode, font=FONT, bg="white",
+                           command=self.set_comment_mode)
+            for value, text in [("during", "During the lesson"), ("after", "Only after the lesson"), ("closed", "Closed")]
+        ]
+        for rb in self.mode_buttons:
+            rb.pack(anchor="w")
+
         right = tk.Frame(self.root, bg="white")
         right.pack(side="left", fill="both", expand=True, padx=10, pady=10)
         self.counts = tk.Label(right, text="", font=("Segoe UI", 14, "bold"), bg="white", anchor="w", justify="left")
         self.counts.pack(fill="x")
+        self.status = tk.Label(right, text="", font=FONT, fg="#1a5fb4", bg="white", anchor="w")
+        self.status.pack(fill="x")
         self.log_box = tk.Text(right, width=70, height=22, font=("Consolas", 11))
         self.log_box.pack(fill="both", expand=True)
 
@@ -75,8 +95,12 @@ class LecturerWindow:
     def update_buttons(self):
         has_lesson = self.lesson is not None
         self.btn["open"]["state"] = "normal" if self.course and not has_lesson else "disabled"
-        for key in ("checkin", "photos", "compare", "sheet", "close"):
+        for key in ("checkin", "photos", "compare", "poll", "sheet", "close"):
             self.btn[key]["state"] = "normal" if has_lesson else "disabled"
+        for rb in self.mode_buttons:
+            rb["state"] = "normal" if has_lesson else "disabled"
+        if self.counting:  # one count at a time; Close lesson waits too, so no photo is deleted mid-count
+            self.btn["photos"]["state"] = self.btn["close"]["state"] = "disabled"
         self.btn["checkin"]["text"] = "3. Stop check-in" if self.checkin_on else "3. Start check-in"
         self.show_counts()
 
@@ -86,8 +110,11 @@ class LecturerWindow:
             return
         c = self.checkins.counts
         count = self.attendance.lesson_count()
+        # Expired codes are rejected by the security rules, at the entrance, and never reach Python.
+        # This count is only what the backup check in Python caught, so it is almost always 0.
         self.counts["text"] = (f"Accepted: {len(c.accepted)}    Unknown emails: {len(c.unknown_emails)}    "
-                               f"Rejected codes: {c.rejected}\nHead count: {count if count is not None else '—'}")
+                               f"Rejected by backup check: {c.rejected}\n"
+                               f"Head count: {count if count is not None else '—'}")
 
     def poll(self):
         """Read results from background threads (Firestore listener, head counter)."""
@@ -98,7 +125,18 @@ class LecturerWindow:
                     self.log(f"check-in {value.status}: {value.email}")
                 elif kind == "photo":
                     self.attendance.add_photo_count(value.count())
+                    self.photo_paths.append(value.path)
                     self.log(f"{Path(value.path).name}: {value.count()} people")
+                elif kind == "progress":
+                    self.status["text"] = value
+                elif kind == "counting_done":
+                    self.counting = False
+                    self.status["text"] = f"Counting done: {value} photo(s)."
+                    self.update_buttons()
+                elif kind == "comment":
+                    self.log(f"COMMENT: {value['text']}")
+                elif kind == "answer":
+                    self.show_poll(value)
                 elif kind == "error":
                     self.log(f"error: {value}")
                 self.show_counts()
@@ -127,6 +165,9 @@ class LecturerWindow:
         self.checkins = CheckInService(self.db, self.course, self.lesson)
         self.attendance = AttendanceService(self.course)
         self.checkins.listen(lambda result: self.events.put(("checkin", result)))
+        self.comments = CommentService(self.db, self.lesson)
+        self.comments.listen(lambda c: self.events.put(("comment", c)))
+        self.comment_mode.set("during")
         self.log(f"Lesson opened: {self.lesson.id}")
         self.update_buttons()
 
@@ -161,17 +202,33 @@ class LecturerWindow:
 
     def add_photos(self):
         paths = filedialog.askopenfilenames(title="Class photos", initialdir=PRIVATE_DIR,
-                                            filetypes=[("Photos", "*.jpg *.jpeg *.png")])
+                                            filetypes=[("Photos", "*.jpg *.jpeg *.png *.heic *.heif")])
         if not paths:
             return
-        self.log(f"Counting {len(paths)} photo(s) on this computer, about 5 s each…")
+        heic = [Path(p).name for p in paths if Path(p).suffix.lower() in (".heic", ".heif")]
+        if heic:
+            # The model's image reader cannot open HEIC, the iPhone's default photo format.
+            messagebox.showwarning(
+                "Photo format", "HEIC photos are not supported:\n" + "\n".join(heic) +
+                "\n\nSend the photo as JPEG. For example, email it to yourself from the iPhone "
+                "(Mail sends JPEG), or set the iPhone camera to Settings > Camera > Formats > "
+                "Most Compatible.")
+            paths = [p for p in paths if Path(p).suffix.lower() not in (".heic", ".heif")]
+            if not paths:
+                return
+        self.log(f"Counting {len(paths)} photo(s) on this computer, about 20 s each…")
+        self.counting = True
+        self.update_buttons()
 
         def work():
-            for p in paths:
+            # Runs in a background thread, so the window does not freeze (about 20 s per phone photo).
+            for i, p in enumerate(paths, start=1):
+                self.events.put(("progress", f"Counting photo {i} of {len(paths)}…"))
                 try:
                     self.events.put(("photo", self.counter.count(p)))
                 except Exception as e:  # shown in the window, not lost in the thread
                     self.events.put(("error", e))
+            self.events.put(("counting_done", len(paths)))
         threading.Thread(target=work, daemon=True).start()
 
     def compare(self):
@@ -184,8 +241,12 @@ class LecturerWindow:
 
     def write_sheet(self):
         rows = self.attendance.rows(self.checkins.counts.accepted)
+        writer = XlsxSheetWriter(SHEET_PATH)
         try:
-            where = XlsxSheetWriter(SHEET_PATH).write_attendance(self.lesson.id, rows)
+            where = writer.write_attendance(self.lesson.id, rows)
+            writer.write_lesson_summary(self.lesson.id, len(self.checkins.counts.accepted),
+                                        self.attendance.lesson_count())
+            writer.write_comments(self.lesson.id, self.comments.rows())
         except PermissionError:
             self.log("The sheet is open in Excel. Close it, then click Write sheet again.")
             return
@@ -205,9 +266,86 @@ class LecturerWindow:
             self.toggle_checkin()
         deleted = self.lesson.close()
         self.log(f"Lesson closed. Deleted {deleted} records (codes and check-ins) from the cloud.")
-        self.lesson = self.checkins = self.attendance = None
+        self.delete_photos()
+        if self.poll_window:
+            self.poll_window.destroy()
+            self.poll_window = None
+        self.lesson = self.checkins = self.attendance = self.comments = self.polls = None
         self.sheet_written = False
+        self.photo_paths = []
         self.update_buttons()
+
+    def set_comment_mode(self):
+        self.comments.set_mode(self.comment_mode.get())
+        self.log(f"Comments: {self.comment_mode.get()}")
+
+    def open_poll(self):
+        question = simpledialog.askstring("Open a poll", "Question:", parent=self.root)
+        if not question:
+            return
+        options = simpledialog.askstring("Open a poll", "Options, separated by ; (at least two):", parent=self.root)
+        if not options:
+            return
+        duration = simpledialog.askinteger("Open a poll", "Duration in seconds:", initialvalue=DEFAULT_DURATION_S,
+                                           minvalue=10, maxvalue=600, parent=self.root)
+        if not duration:
+            return
+        self.polls = PollService(self.db, self.lesson)
+        try:
+            self.polls.open_poll(question, options.split(";"), duration,
+                                 on_answer=lambda results: self.events.put(("answer", results)))
+        except ValueError as e:
+            messagebox.showerror("Open a poll", str(e))
+            self.polls = None
+            return
+        self.log(f"Poll opened for {duration} s: {question}")
+        # The fixed code on the projector opens the lesson page, for phones that do not have it open (FR-8.2).
+        if self.poll_window:
+            self.poll_window.destroy()
+        self.poll_window = tk.Toplevel(self.root, bg="white")
+        self.poll_window.title("Poll: scan to answer")
+        tk.Label(self.poll_window, text=question, font=("Segoe UI", 26, "bold"), bg="white",
+                 wraplength=700).pack(pady=(20, 5))
+        self.poll_qr = ImageTk.PhotoImage(qrcode.make(f"{LESSON_URL}?l={self.lesson.id}",
+                                                      box_size=10, border=3).get_image())
+        tk.Label(self.poll_window, image=self.poll_qr, bg="white").pack()
+        self.poll_label = tk.Label(self.poll_window, text="", font=("Segoe UI", 20), bg="white", justify="left")
+        self.poll_label.pack(pady=(5, 20))
+        self.show_poll(self.polls.results(), header=f"Open for {duration} s")
+        self.root.after(duration * 1000, self.end_poll)
+
+    def show_poll(self, results, header=None):
+        if not self.poll_window or not self.polls:
+            return
+        header = header or f"{sum(c for _, c in results)} answers"
+        self.poll_label["text"] = header + "\n" + "\n".join(f"{text}: {count}" for text, count in results)
+
+    def end_poll(self):
+        if not self.polls:
+            return
+        results = self.polls.close_poll()
+        self.log("Poll closed. Results: " + ", ".join(f"{t} {c}" for t, c in results))
+        self.show_poll(results, header=f"Closed: {sum(c for _, c in results)} answers")
+
+    def delete_photos(self):
+        """After the head count is saved in the sheet, delete this lesson's photos from the computer."""
+        if not self.photo_paths:
+            return
+        if not self.sheet_written:
+            self.log("Photos were kept: the head count is not saved in a sheet yet.")
+            return
+        names = "\n".join(Path(p).name for p in self.photo_paths)
+        if not messagebox.askyesno("Delete class photos",
+                                   f"The head count is saved in the sheet.\nDelete these "
+                                   f"{len(self.photo_paths)} photo(s) from this computer?\n\n{names}"):
+            self.log("Photos were kept, at the lecturer's choice.")
+            return
+        for p in self.photo_paths:
+            try:
+                os.remove(p)
+                self.log(f"Deleted photo: {Path(p).name}")
+            except OSError as e:
+                self.log(f"Could not delete {Path(p).name}: {e}")
 
     def run(self):
         self.root.mainloop()

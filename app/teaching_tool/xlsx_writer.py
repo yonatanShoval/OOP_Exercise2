@@ -46,3 +46,29 @@ class XlsxSheetWriter(SheetWriter):
             ws.cell(row=r, column=col, value=data["status"])
         wb.save(self.path)
         return str(self.path)
+
+    def write_lesson_summary(self, lesson_name, checked_in, head_count):
+        """A "Lessons" tab: one row per lesson with its numbers (replaced if written again)."""
+        wb = openpyxl.load_workbook(self.path)
+        if "Lessons" not in wb.sheetnames:
+            wb.create_sheet("Lessons").append(["Lesson", "Checked in", "Head count"])
+        ws = wb["Lessons"]
+        for r in range(2, ws.max_row + 1):
+            if ws.cell(row=r, column=1).value == lesson_name:
+                ws.delete_rows(r)
+                break
+        ws.append([lesson_name, checked_in, head_count])
+        wb.save(self.path)
+
+    def write_comments(self, lesson_name, rows):
+        """The "Comments" tab. This lesson's old rows are replaced, so writing again does not repeat them."""
+        wb = openpyxl.load_workbook(self.path)
+        if "Comments" not in wb.sheetnames:
+            wb.create_sheet("Comments").append(["Lesson", "Time", "Text"])
+        ws = wb["Comments"]
+        for r in range(ws.max_row, 1, -1):
+            if ws.cell(row=r, column=1).value == lesson_name:
+                ws.delete_rows(r)
+        for row in rows:
+            ws.append([lesson_name, row["time"], row["text"]])
+        wb.save(self.path)

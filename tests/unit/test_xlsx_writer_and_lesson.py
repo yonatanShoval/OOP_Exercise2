@@ -20,6 +20,15 @@ def test_two_lessons_give_two_columns_and_read_back(tmp_path):
     assert ws.max_row == 3
 
 
+def test_lesson_summary_keeps_the_head_count(tmp_path):
+    writer = XlsxSheetWriter(tmp_path / "attendance.xlsx")
+    writer.write_attendance("L1", [row("a@demo.test", "present")])
+    writer.write_lesson_summary("L1", 50, 30)
+    writer.write_lesson_summary("L1", 50, 31)  # written again: replaced, not added
+    ws = openpyxl.load_workbook(tmp_path / "attendance.xlsx")["Lessons"]
+    assert [[c.value for c in r] for r in ws.iter_rows()] == [["Lesson", "Checked in", "Head count"], ["L1", 50, 31]]
+
+
 def test_closing_a_lesson_deletes_codes_and_check_ins():
     db = FakeDatabase()
     lesson = Lesson.open(db)

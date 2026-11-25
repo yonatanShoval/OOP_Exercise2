@@ -1,7 +1,12 @@
 """Head count (component C10): count people in a class photo, locally (FR-3.1 – FR-3.5).
 
-The photo never leaves the lecturer's computer. The model is YOLO26x at image size 1280,
-then DoubleCountRule removes double counts (D28). Tested in docs/tools-report.md, section 3.
+Our system never uploads the photo. The model is YOLO26x at image size 1920, then
+DoubleCountRule (strict version) removes double counts (D28, D55).
+
+Why 1920 and the strict rule: in the combined experiment of 25/11 (5 class photos + 15
+SCUT-HEAD images), this was the only option within ±10% on all 5 class photos (worst +2.6%).
+At 1280 with today's rule, an iPhone photo with 17 people gave 13 (-23.5%). See
+docs/tools-report.md, section 3.
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,13 +33,20 @@ class Photo:
 
 
 class DoubleCountRule:
-    """A desk can split one student into two boxes. Thresholds from the tools report (D28).
+    """A desk can split one student into two boxes (D28, strict version D55).
 
     Part 2, drop a legs-only box: width >= 1.5 x height, center in the bottom third,
-    confidence < 0.40. Part 1, merge two boxes of one person: horizontal overlap >= 80% of
-    the narrower box, >= 80% of the smaller box inside the larger one, and top edges within
-    20% of the smaller box's height. Part 2 runs first.
+    confidence < 0.40. Part 1, merge two boxes of one person: horizontal overlap >= 95% of
+    the narrower box, >= 95% of the smaller box inside the larger one, and top edges within
+    10% of the smaller box's height. Part 2 runs first.
+
+    The first version merged at 80% / 80% / 20%. On an iPhone photo it merged two real
+    people, one sitting behind the other, so the thresholds were made stricter.
     """
+
+    MIN_OVERLAP = 0.95  # of the narrower box's width
+    MIN_INSIDE = 0.95   # of the smaller box's area
+    MAX_TOP_GAP = 0.10  # of the smaller box's height
 
     @staticmethod
     def is_legs_only(box: Box, image_height: int) -> bool:
@@ -42,8 +54,8 @@ class DoubleCountRule:
         width, height = x2 - x1, y2 - y1
         return width >= 1.5 * height and (y1 + y2) / 2 > image_height * 2 / 3 and box.conf < 0.40
 
-    @staticmethod
-    def same_person(a: Box, b: Box) -> bool:
+    @classmethod
+    def same_person(cls, a: Box, b: Box) -> bool:
         ax1, ay1, ax2, ay2 = a.xyxy
         bx1, by1, bx2, by2 = b.xyxy
         overlap_w = max(0.0, min(ax2, bx2) - max(ax1, bx1))
@@ -51,9 +63,9 @@ class DoubleCountRule:
         narrower = min(ax2 - ax1, bx2 - bx1)
         smaller_area = min((ax2 - ax1) * (ay2 - ay1), (bx2 - bx1) * (by2 - by1))
         smaller_height = min(ay2 - ay1, by2 - by1)
-        return (overlap_w >= 0.8 * narrower
-                and overlap_w * overlap_h >= 0.8 * smaller_area
-                and abs(ay1 - by1) <= 0.20 * smaller_height)
+        return (overlap_w >= cls.MIN_OVERLAP * narrower
+                and overlap_w * overlap_h >= cls.MIN_INSIDE * smaller_area
+                and abs(ay1 - by1) <= cls.MAX_TOP_GAP * smaller_height)
 
     def apply(self, boxes: list[Box], image_height: int) -> list[Box]:
         """Return one box per person: legs-only boxes dropped, merged groups kept as their largest box."""
@@ -81,7 +93,7 @@ class DoubleCountRule:
 class HeadCounter:
     """Runs the local model on a photo. The model is loaded once, on first use."""
 
-    def __init__(self, weights: str | Path = DEFAULT_WEIGHTS, imgsz: int = 1280, conf: float = 0.25):
+    def __init__(self, weights: str | Path = DEFAULT_WEIGHTS, imgsz: int = 1920, conf: float = 0.25):
         self.weights, self.imgsz, self.conf = str(weights), imgsz, conf
         self.rule = DoubleCountRule()
         self._model = None

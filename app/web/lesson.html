@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lesson</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 16px; max-width: 480px; background: #fff; color: #111; }
+    h1 { font-size: 24px; } h2 { font-size: 20px; margin-top: 28px; }
+    textarea, button { font-size: 18px; padding: 10px; width: 100%; box-sizing: border-box; margin: 6px 0; }
+    button { background: #1a5fb4; color: #fff; border: 0; border-radius: 6px; }
+    button.option { background: #fff; color: #1a5fb4; border: 2px solid #1a5fb4; }
+    .ok { color: #1a7f37; font-weight: bold; } .bad { color: #c01c28; font-weight: bold; } .muted { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>Lesson</h1>
+
+  <h2>Poll</h2>
+  <div id="poll"><p class="muted">No poll right now. It will appear here by itself.</p></div>
+
+  <h2>Comment (anonymous)</h2>
+  <div id="comment-closed" class="muted" hidden></div>
+  <form id="comment-form" hidden>
+    <textarea id="text" maxlength="200" rows="3" placeholder="For example: please explain the last example again"></textarea>
+    <button type="submit">Send comment</button>
+  </form>
+  <p id="comment-status"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+    import { initializeFirestore, persistentLocalCache, doc, collection, query, where,
+             onSnapshot, addDoc, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+    // Public web config (not a secret). Access is protected by firestore.rules.
+    const app = initializeApp({
+      apiKey: "AIzaSyDEqOdwdyJmmRSyzqP9PfkxWT90w5bC6OE",
+      authDomain: "oop-exercise2.firebaseapp.com",
+      projectId: "oop-exercise2",
+      storageBucket: "oop-exercise2.firebasestorage.app",
+      messagingSenderId: "913574707847",
+      appId: "1:913574707847:web:5cf2e324d2c711fd0aee22"
+    });
+    // Local cache: a comment written with no network waits on the phone and is sent later (FR-7.4).
+    const db = initializeFirestore(app, { localCache: persistentLocalCache() });
+    const lesson = new URLSearchParams(location.search).get("l");
+    const $ = (id) => document.getElementById(id);
+
+    if (!lesson) {
+      document.body.innerHTML = "<p class='bad'>Scan the code on the projector to open the lesson.</p>";
+      throw new Error("no lesson");
+    }
+
+    // Comments: open or closed by the lecturer's mode. The security rules enforce it too.
+    onSnapshot(doc(db, "lessons", lesson), (snap) => {
+      const l = snap.data() || {};
+      const open = l.comment_mode === "during" || (l.comment_mode === "after" && l.closed === true);
+      $("comment-form").hidden = !open;
+      $("comment-closed").hidden = open;
+      $("comment-closed").textContent = l.comment_mode === "after"
+        ? "Comments open after the lesson." : "Comments are closed.";
+    });
+
+    $("comment-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = $("text").value.trim();
+      if (!text) return;
+      // Not awaited: with no network, the comment waits on the phone and is sent later.
+      addDoc(collection(db, "lessons", lesson, "comments"), { text, server_time: serverTimestamp() })
+        .then(() => { $("comment-status").textContent = "Comment sent ✓"; $("comment-status").className = "ok"; })
+        .catch(() => { $("comment-status").textContent = "Comments are closed."; $("comment-status").className = "bad"; });
+      $("comment-status").textContent = navigator.onLine ? "Sending…" : "Saved on the phone. It will be sent when the network returns.";
+      $("comment-status").className = "muted";
+      $("text").value = "";
+    });
+
+    // Polls: show the open poll. One answer per phone, remembered on the phone (FR-8.5).
+    const polls = query(collection(db, "lessons", lesson, "polls"), where("closed", "==", false));
+    onSnapshot(polls, (snap) => {
+      const open = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .filter((p) => p.server_time && p.server_time.toMillis() + p.duration_s * 1000 > Date.now());
+      const box = $("poll");
+      if (!open.length) { box.innerHTML = "<p class='muted'>No poll right now. It will appear here by itself.</p>"; return; }
+      const p = open[open.length - 1];
+      const key = "answered-" + lesson + "-" + p.id;
+      box.innerHTML = "";
+      const q = document.createElement("p"); q.innerHTML = "<b></b>"; q.firstChild.textContent = p.question; box.appendChild(q);
+      if (localStorage.getItem(key)) { box.insertAdjacentHTML("beforeend", "<p class='ok'>Your answer was sent ✓</p>"); return; }
+      p.options.forEach((text, i) => {
+        const b = document.createElement("button");
+        b.className = "option"; b.textContent = text;
+        b.onclick = async () => {
+          box.querySelectorAll("button").forEach((x) => x.disabled = true);
+          try {
+            await addDoc(collection(db, "lessons", lesson, "polls", p.id, "answers"), { option: i, server_time: serverTimestamp() });
+            localStorage.setItem(key, "1");
+            box.insertAdjacentHTML("beforeend", "<p class='ok'>Your answer was sent ✓</p>");
+          } catch {
+            box.insertAdjacentHTML("beforeend", "<p class='bad'>The poll is closed.</p>");
+          }
+        };
+        box.appendChild(b);
+      });
+    });
+  </script>
+</body>
+</html>

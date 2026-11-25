@@ -29,6 +29,39 @@ service cloud.firestore {
                           + duration.value(60, 's');
     }
 
+    // A comment: anonymous (text and server time only), 1-200 characters, and only when the
+    // lecturer's mode allows it: "during" the lesson, or "after" it (once the lesson is closed).
+    match /lessons/{lessonId}/comments/{commentId} {
+      allow create: if request.resource.data.keys().hasAll(['text', 'server_time'])
+        && request.resource.data.keys().hasOnly(['text', 'server_time'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() >= 1
+        && request.resource.data.text.size() <= 200
+        && request.resource.data.server_time == request.time
+        && (get(/databases/$(database)/documents/lessons/$(lessonId)).data.comment_mode == 'during'
+            || (get(/databases/$(database)/documents/lessons/$(lessonId)).data.comment_mode == 'after'
+                && get(/databases/$(database)/documents/lessons/$(lessonId)).data.closed == true));
+    }
+
+    // A poll holds no personal data, so the phones may read it. An answer is anonymous
+    // (option and server time only), and is accepted only while the poll is open:
+    // not closed, and less than duration_s seconds after it was opened (server time).
+    match /lessons/{lessonId}/polls/{pollId} {
+      allow read: if true;
+
+      match /answers/{answerId} {
+        allow create: if request.resource.data.keys().hasAll(['option', 'server_time'])
+          && request.resource.data.keys().hasOnly(['option', 'server_time'])
+          && request.resource.data.option is int
+          && request.resource.data.option >= 0
+          && request.resource.data.option < get(/databases/$(database)/documents/lessons/$(lessonId)/polls/$(pollId)).data.options.size()
+          && request.resource.data.server_time == request.time
+          && get(/databases/$(database)/documents/lessons/$(lessonId)/polls/$(pollId)).data.closed == false
+          && request.time < get(/databases/$(database)/documents/lessons/$(lessonId)/polls/$(pollId)).data.server_time
+                            + duration.value(get(/databases/$(database)/documents/lessons/$(lessonId)/polls/$(pollId)).data.duration_s, 's');
+      }
+    }
+
     // Everything else, including the old test collection, is blocked for the phones.
     match /{document=**} {
       allow read, write: if false;

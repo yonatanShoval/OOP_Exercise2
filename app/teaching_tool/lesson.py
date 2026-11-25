@@ -20,7 +20,8 @@ class Lesson:
         """Create a new lesson record. The id holds the date and a random part."""
         now = now or datetime.now()
         lesson_id = f"{now:%Y-%m-%d-%H%M}-{secrets.token_hex(2)}"
-        db.set(f"lessons/{lesson_id}", {"date": f"{now:%Y-%m-%d}", "checkin_open": False, "closed": False})
+        db.set(f"lessons/{lesson_id}", {"date": f"{now:%Y-%m-%d}", "checkin_open": False, "closed": False,
+                                        "comment_mode": "during"})
         return cls(db, lesson_id)
 
     def path(self, collection: str = "") -> str:

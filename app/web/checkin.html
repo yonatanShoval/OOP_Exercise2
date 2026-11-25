@@ -77,6 +77,9 @@
         // Saved means the security rules accepted the code: it is less than 60 s old.
         // The lecturer's computer still checks the email against the course list.
         status("Check-in received ✓", "ok");
+        const link = document.createElement("p");
+        link.innerHTML = `<a href="lesson.html?l=${encodeURIComponent(lesson)}">Open the lesson page: polls and comments</a>`;
+        $("status").after(link);
       } catch (err) {
         if (err.code !== "permission-denied") {
           status("Not sent: " + err.message, "bad");

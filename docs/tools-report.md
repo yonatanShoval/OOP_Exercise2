@@ -208,17 +208,73 @@ After the rule, all four manually counted photos match the manual count. **All t
 
 Photos of the same lesson still give different counts (for example 28 to 44 on 8/11). This does not come from the desk. Combining several photos of one lesson without counting a student twice is an open question for the SRS.
 
+### A later test on new photos (25/11): resolution, tiles, and a stricter rule
+
+The rule's thresholds were set on the lecturer's photos, so we tested on new photos.
+
+**An iPhone photo:**
+- A photo from an iPhone, sent by email, with 17 people.
+- At 1280 with the rule, it gave 13, a miss of 23.5%.
+- The email did not make it smaller: it is 4032 × 3024.
+
+**The test set:** 20 images.
+- The 4 counted photos of the lecturer.
+- The iPhone photo.
+- 15 random test images from **SCUT-HEAD PartA**, with their annotated head counts: 517 heads in all.
+
+**About SCUT-HEAD:**
+- **Source:** github.com/HCIILAB/SCUT-HEAD-Dataset-Release.
+- **The paper:** Peng et al., "Detecting Heads using Feature Refine Net and Cascaded Multi-Scale Architecture", arXiv 1803.09256.
+- **License:** "free to the academic community for research purpose usage only".
+- **What it contains:** PartA is low-resolution frames, about 1000–1265 × 540–720, from ceiling security cameras in university classrooms. Its truth is heads, not people, so it is a harder test than a phone photo.
+- **Where it is kept:** only the 15 images, in `course-materials/`. Nothing of it is in git.
+
+**The model:** it ran once, the boxes were saved, and each rule was then applied to the saved boxes.
+**Tiles-2x2:** the full image plus 4 tiles with 25% overlap, each at 1280. The boxes were merged with non-maximum suppression (IoU 0.5), and then the rule was applied.
+**The strict rule:** a merge needs a horizontal overlap of at least 95%, at least 95% of the smaller box inside the larger one, and top edges within 10%.
+
+| Option | Mean error, 20 images | Worst error, 20 images | Within ±10% | Seconds per image (mean of 20) | Worst error, 5 class photos |
+|---|---|---|---|---|---|
+| 1280 + rule (before) | 26.0% | −72.7% | 8/20 | 4.1 | −23.5% (iPhone) |
+| 1920 + rule | 15.8% | −41.6% | 11/20 | 9.0 | −5.9% (iPhone) |
+| Tiles 2×2 + rule | 19.3% | −51.8% | 10/20 | 20.3 | +10.5% (p1) |
+| 1920, no rule | 16.1% | −41.6% | 10/20 | 9.0 | +17.6% (iPhone) |
+| **1920 + strict rule (chosen)** | **15.5%** | −41.6% | **11/20** | 9.0 | **+2.6% (p1)** |
+
+| Photo (truth) | 1280 + rule | 1920 + strict rule |
+|---|---|---|
+| p1 (38) | 38 | 39 |
+| p11 (44) | 44 | 44 |
+| p21 (43) | 43 | 44 |
+| p31 (46) | 46 | 47 |
+| iPhone (17) | 13 | 17 |
+
+**What we learned:**
+- **The choice:** 1920 with the strict rule was the only option within ±10% on all 5 class photos.
+- **The first rule:** it merged two real people in the iPhone photo, one sitting behind the other.
+- **With no rule:** it counted 20 instead of 17.
+- **Time:** at 1920, a phone photo takes 16.6–19.6 s, about 3 times longer than at 1280. So the app counts in the background.
+- **2560:** on the 5 class photos it did not help the iPhone photo (13), and took about 34 s per photo.
+
+**An honest limitation:** the count works for phone photos taken from the front of the class. On the SCUT-HEAD ceiling-camera frames, no option met ±10%.
+- With 1920 and the strict rule, 6 of the 15 frames were within ±10%.
+- The 6 crowded frames, with 56–77 heads, were missed by 29.9–41.6%. For example, 77 heads were counted as 45.
+- Many heads are hidden behind other people in those frames, and the model finds people, not heads.
+
 ### Limitations
 
 - The manual count was done after the model's results were already seen, which may have influenced it.
 - Only 4 photos were counted by hand, by one person.
 - Only the CPU was used. A GPU was not tested.
+- The choice of 1920 and the strict rule rests on 5 class photos. One of them, the iPhone photo, is new. More new phone photos are still needed.
 
 ### License
 
 Ultralytics YOLO is licensed under AGPL-3.0 (https://www.ultralytics.com/license). According to the license page, using YOLO code or models means you "must either: Open-source your entire project under AGPL-3.0, or Obtain an Ultralytics Enterprise License." The free option was chosen: this repository is public, and a `LICENSE` file with the AGPL-3.0 text was added to it.
 
 ### Conclusion
+
+**Update, 25/11:** the app now uses 1920 with a stricter rule. A new iPhone photo was missed by 23.5% at 1280, and the new setting fixed it. See the later test above. The first test's conclusion follows.
 
 YOLO26x at 1280 was within 0 to 1 of the manual count on all four checked photos, in about 5 seconds per photo on a regular CPU, fully on the local computer. YOLO26n at 640 is about 50 times faster but found only about a quarter of the people, so it is not suitable for a lecture hall of this size. The main error was a student split in two by the desk. A simple rule on the boxes fixed it in these photos, but its thresholds still need to be tested on new photos.
 

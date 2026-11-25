@@ -42,7 +42,7 @@ flowchart TB
 
 A level starts only after the level before it passes.
 
-**Example with numbers:** section 3 lists 12 classes. Each has 2 to 5 cases, so about 40 unit tests. They should run in seconds, with no internet, because nothing waits for a network. That is an expectation, not yet measured. The rules table in section 5 has 8 cases, and each case is one small request. In the end-to-end run, the head count alone takes about 5 seconds per photo (tools report, section 3).
+**Example with numbers:** section 3 lists 12 classes. Each has 2 to 5 cases, so about 40 unit tests. They should run in seconds, with no internet, because nothing waits for a network. That is an expectation, not yet measured. The rules table in section 5 has 8 cases, and each case is one small request. In the end-to-end run, the head count alone takes about 18 seconds per phone photo at 1920 (tools report, section 3).
 
 ## 3. Unit tests
 
@@ -156,7 +156,7 @@ Each use case passes when its happy path and every edge case behave as the use c
 
 **Live in class:**
 - [ ] Students check in from their phones with the code on the projector.
-- [ ] A **new** photo of the class is taken with the phone, and moved to the laptop, preferably by cable or a local transfer. **Do not send it through WhatsApp as a regular photo**: WhatsApp makes it smaller, which can hurt the count.
+- [ ] A **new** photo of the class is taken with the phone, and moved to the laptop, preferably by cable or a local transfer. **Do not send it through WhatsApp as a regular photo**: WhatsApp makes it smaller, which can hurt the count. **The photo must be JPEG, not HEIC** (the iPhone's default format): the model cannot read HEIC, and the window says so. An email from the iPhone arrives as JPEG at full size (4032 × 3024 in a test on 25/11).
 - [ ] The new photo is counted. The count is within ±10% of a quick manual count (NFR-3).
 - [ ] A mismatch alert appears, and a challenge runs on the projector only.
 - [ ] The lecturer decides, and the sheet is written as a local `.xlsx` file only, not to Google Sheets. It opens in Excel by itself, so the class sees it at once.
@@ -189,7 +189,7 @@ Each use case passes when its happy path and every edge case behave as the use c
 ## 10. What is not tested, and why
 
 - **Android phones:** only an iPhone with Chrome was tested.
-- **The head count on new photos:** the rule's thresholds were set on the lecturer's photos. The real test is the new photo in the demo.
+- **The head count on new photos:** the setting (1920, strict rule) was chosen on 5 class photos, one of them a new iPhone photo. It works for phone photos taken from the front. On low-resolution ceiling security-camera frames (SCUT-HEAD PartA, 15 images), no option met ±10%: the 6 crowded frames, with 56–77 heads, were missed by 29.9–41.6% (tools report, section 3). The real test is the new photo in the demo. The saved boxes (`course-materials/headcount-output/exp-boxes.json`) let new rules be checked in seconds.
 - **The Gemini summary:** on 25/11, 6 of 6 tries failed with error 503 (tools report, section 6). The fallback model `gemini-3.6-flash` has not been tried yet. Its free-tier limits are 5 requests per minute and 20 per day (tools report, section 7).
 - **The QR code on a real projector:** it was tested only on a laptop screen, from up to 5 meters.
 - **Load:** a class of about 100 phones at once was not tested. Each request is small, and the free plan's daily limits are far above one lesson.

@@ -17,3 +17,11 @@ class SheetWriter(ABC):
         Each row has: first_name, last_name, email, group, status.
         Returns where the sheet was written.
         """
+
+    @abstractmethod
+    def write_lesson_summary(self, lesson_name: str, checked_in: int, head_count: int | None) -> None:
+        """Keep the lesson's numbers, so the photos can be deleted after the lesson."""
+
+    @abstractmethod
+    def write_comments(self, lesson_name: str, rows: list[dict]) -> None:
+        """The "Comments" tab: lesson, time, text. No email (FR-7.6)."""

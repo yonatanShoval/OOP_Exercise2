@@ -255,8 +255,12 @@ All of these are Python classes. The lecturer uses only C6.
 | | |
 |---|---|
 | **What it does** | It counts the people in each photo with a local model, merges two boxes of the same person with the rule, and returns the boxes and the count. The lesson's count is the highest count of its photos. |
-| **Built with** | Ultralytics YOLO26x, image size 1280, confidence 0.25, plus our rule against double counting (D28). |
-| **Where it runs** | Only on the lecturer's computer. The photo is never sent to the cloud. |
+| **Built with** | Ultralytics YOLO26x, image size 1920, confidence 0.25, plus the strict version of our rule against double counting (D28, D55). |
+| **Limitation** | Works for phone photos taken from the front of the class: within ±10% on all 5 class photos in the experiment of 25/11 (worst +2.6%). On low-resolution ceiling security-camera frames (SCUT-HEAD PartA, 15 images) no option met ±10%: crowded frames with 56–77 heads were missed by 29–42% (tools report, section 3). |
+| **Where it runs** | Only on the lecturer's computer. Our system never uploads the photo. |
+| **Why on the computer** | Mainly cost and what is possible: the accurate model needs a computer (about 18 s per phone photo at 1920); the light model that fits a phone found only about a quarter of the people; and the free Firebase plan has no cloud server (no Cloud Functions on Spark). Privacy is a bonus. |
+| **After the lesson** | The lesson's numbers go to a "Lessons" tab in the sheet. Then, when the lesson closes, the photos are deleted from the computer, after the lecturer confirms. |
+| **Future idea** | Taking the photo inside the app, on the lecturer's phone. Three options were considered and rejected for now: (1) upload to our cloud and delete at once: privacy, and Cloud Storage for Firebase needs the paid Blaze plan since 3 February 2026 (it has a no-cost level, but needs a billing account, against D9); (2) a direct transfer over the network to the computer: risky on a campus network; (3) the computer's own camera: a poor angle for a lecture hall. |
 | **Requirements** | FR-3.1 to FR-3.5, NFR-3, NFR-4, NFR-9 |
 | **Tested base** | `tools-tests/03-headcount/python/count_people.py`, `apply_rule.py`, `save_all_boxes.py` |
 
