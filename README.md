@@ -47,7 +47,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 - [x] 3. Tools report (every tool tested for real): [docs/tools-report.md](docs/tools-report.md)
 - [x] 4. SoW: [docs/sow.md](docs/sow.md)
 - [x] 5. SRS: [docs/srs.md](docs/srs.md)
-- [ ] 6. Use cases
+- [x] 6. Use cases: [docs/use-cases.md](docs/use-cases.md)
 - [ ] 7. Main software components
 - [ ] 8. Class diagrams and sequence diagrams
 - [ ] 9. Testing strategy
