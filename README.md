@@ -46,7 +46,7 @@ The exact details of each feature (how check-in works, what the lecturer uploads
 - [ ] 2. Submit the repository
 - [x] 3. Tools report (every tool tested for real): [docs/tools-report.md](docs/tools-report.md)
 - [x] 4. SoW: [docs/sow.md](docs/sow.md)
-- [ ] 5. SRS
+- [x] 5. SRS: [docs/srs.md](docs/srs.md)
 - [ ] 6. Use cases
 - [ ] 7. Main software components
 - [ ] 8. Class diagrams and sequence diagrams

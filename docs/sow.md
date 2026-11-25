@@ -21,12 +21,12 @@ The assignment defines five features. Attendance is the main one.
 | 2 | **Comments and suggestions** | A student writes a short comment from the phone. The lecturer sees the comments of the current lesson, during the lesson or after it, as the lecturer decides. |
 | 3 | **Quick polls** | The lecturer opens a short poll on the spot. Students answer from the phone. The lecturer sees the results when the poll closes. |
 | 4 | **Lecture summary** | From a class recording, the lecturer gets a transcript and a summary. |
-| 5 | **Homework review** | From a list of repository links, the lecturer gets a review of each submission, with a comparison and a ranking. |
+| 5 | **Homework review** | From a list of repository links, the lecturer gets a review of each submission, a ranking, and a class comparison. Each student gets their own report, and can also review their own repository before submitting. |
 
 ## 3. Users
 
 - **The lecturer** runs the system from a simple window on their own computer and does not write code.
-- **The student** uses only a phone browser: no app to install and no account.
+- **The student** uses only a phone browser: no app to install and no account. For the homework review only, a student can also run the review script on their own computer.
 
 ## 4. Deliverables
 
@@ -89,9 +89,10 @@ The assignment defines five features. Attendance is the main one.
 - The design has one interface, `ReviewEngine`, with two implementations:
   - **Gemini API:** the main one, automatic. The model is `gemini-4-hydrogen`, and the model name is a parameter. When the daily free quota (20 requests) runs out, the review continues the next day with the same model, so that every submission is reviewed by the same model and the ranking stays fair.
   - **Manual:** the backup. The script prepares the request, and the lecturer pastes it into a free LLM chat.
-- The output:
-  - One Markdown report per link.
-  - One sheet that ranks all the links.
+- The output, in two stages:
+  - **Stage 1:** one Markdown report per link, with a score for each criterion, and one sheet that ranks all the links by score.
+  - **Stage 2:** one request with a short summary of each review gives a class comparison: where each submission stands, and what others did well.
+- **Students and teachers:** the lecturer runs the review on the whole course and gives each student their own report. A student can run the same script on their own repository before submitting, with their own free key.
 
 The review supports a human grader and does not replace one.
 
