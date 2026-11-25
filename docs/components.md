@@ -146,7 +146,7 @@ flowchart TB
 - **Review (C16):** C16 downloads each repository from GitHub, packs it, sends it to Gemini, and saves the reports. It never sends a name or a link, only "Repo A", "Repo B", and so on.
 
 **Example with numbers:**
-- **Summary:** a 90-minute recording. The measured speed was 66.5 seconds of work per minute of recording, so the transcript takes about 100 minutes. The window then asks: "Send the transcript to Gemini?" The lecturer clicks "OK", and the summary comes back in one request, out of the 20 requests per day that the review also uses. The summary is ready about two hours after the lesson. If the lecturer clicks "No", nothing is sent, and the lecturer has the transcript only.
+- **Summary:** a 90-minute recording. The measured speed was 66.5 seconds of work per minute of recording, so the transcript takes about 100 minutes. The window then asks: "Send the transcript to Gemini?" The lecturer clicks "OK", and the summary comes back in one request. The summary has its own Google project and key, with its own 20 requests per day, so a long review never blocks it. One summary per day is enough. The summary is ready about two hours after the lesson. If the lecturer clicks "No", nothing is sent, and the lecturer has the transcript only.
 - **Review:** a links file with 45 repositories. One request per repository takes about 22 seconds. The free quota is 20 requests per day:
   - Day 1: repositories 1–20.
   - Day 2: repositories 21–40.
@@ -204,7 +204,7 @@ flowchart TB
 | | |
 |---|---|
 | **What it does** | It reviews a bundle, writes the class comparison, and summarizes a lesson transcript. |
-| **Talks to** | Only C15 and C16, through `ReviewEngine`, with the Gemini key from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day, shared by the summary and the review. |
+| **Talks to** | Only C15 and C16, through `ReviewEngine`, with keys from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day. The quota is per Google project, not per key. So the review and the summary use two separate projects, each with its own key and its own 20 requests per day. |
 | **Note** | On the free tier, Google uses the content to improve its products. Only public repositories are sent, under anonymous names. |
 | **Requirements** | FR-10.4, FR-10.9, NFR-11 |
 | **Tested base** | `tools-tests/07-homework-review/python/gemini_review.py` |
@@ -339,4 +339,4 @@ All of these are Python classes. The lecturer uses only C6.
   - `ReviewEngine`: Gemini or manual. Both the summary (C15) and the review (C16) use it.
   - `Database`: Firestore or fake.
 - **Private data stays local.** The photos, the recordings and the real course list stay on the lecturer's computer.
-- **Secrets stay in `secrets/`.** The service account key and the Gemini key are read only by C8, C12, C15 and C16, and never enter git.
+- **Secrets stay in `secrets/`.** The service account key and the two Gemini keys (one for the review, one for the summary) are read only by C8, C12, C15 and C16, and never enter git.

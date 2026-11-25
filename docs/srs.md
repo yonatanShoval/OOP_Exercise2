@@ -165,7 +165,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-9.4 | Before anything is sent, the window asks the lecturer to confirm sending the transcript. It explains why: the transcript may hold names and voices of students, and on the free tier Google uses the content to improve its products. |
 | FR-9.5 | If the lecturer confirms, the system sends the transcript through the `ReviewEngine` interface, the same as the homework review. The main implementation is the Gemini API (`gemini-4-hydrogen`). The summary is saved next to the transcript. |
 | FR-9.6 | If the lecturer does not confirm, nothing is sent, and the transcript stays on the lecturer's computer. The backup is the manual engine: the lecturer can paste the transcript into an LLM chat by their own choice. |
-| FR-9.7 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. The summary uses the same daily quota and the same retry rule as the review: at most three tries, and when the quota runs out, it continues the next day. |
+| FR-9.7 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. The summary uses its own Google project and key, separate from the review, because the free quota is per project, not per key. So it has its own 20 requests per day, and one summary per day is enough. It uses the same retry rule as the review: at most three tries. |
 
 ### 3.10 Homework review (UC-13)
 
@@ -199,7 +199,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | NFR-10 | Privacy | Real student data is kept only on the lecturer's computer. Tests and the demo use invented data in the cloud. Comments and poll answers are anonymous. | Design (D30, D37). |
 | NFR-11 | Privacy | Only two kinds of text are sent to the Gemini API: public repositories, under anonymous names, and a lesson transcript, only after the lecturer confirms. On the free tier, Google uses the content to improve its products. | Accepted (D38, D42). |
 | NFR-12 | Security | The database rules allow only the fields each record needs, with the server time. They never allow a client to update or delete. Everything else is blocked. | Tested on the test collection (section 1). |
-| NFR-13 | Security | The service account key and the Gemini key are kept in `secrets/`, which is blocked by `.gitignore`. They never enter git. | Checked before each commit. |
+| NFR-13 | Security | The service account key and the two Gemini keys (one for the review, one for the summary, each in its own Google project) are kept in `secrets/`, which is blocked by `.gitignore`. They never enter git. | Checked before each commit. |
 | NFR-14 | Cost | Running the system costs nothing. | Free plans only. |
 | NFR-15 | Portability | The student page works in a phone browser. | Tested on an iPhone with Chrome. Android was not tested. |
 

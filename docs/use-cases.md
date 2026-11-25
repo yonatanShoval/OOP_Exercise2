@@ -284,7 +284,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 
 **Story:** As a lecturer, I want a transcript and a summary of my recorded lesson, so that I have useful notes after the lesson.
 
-**Preconditions:** the lecturer downloaded the class recording by hand from Zoom, Meet or Google Classroom. A free Gemini key in `secrets/`.
+**Preconditions:** the lecturer downloaded the class recording by hand from Zoom, Meet or Google Classroom. A free Gemini key for the summary in `secrets/`, from its own Google project.
 
 **Happy path:**
 1. The lecturer chooses the recording in the window.
@@ -300,7 +300,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 2. **The first seconds are missed:** in the test, the first 30 seconds were missing. The lecturer checks the start.
 3. **A file type that cannot be read:** the window shows an error.
 4. **The lecturer does not confirm** (for example, students' names appear in the transcript): nothing is sent. The transcript stays on the lecturer's computer. The lecturer can still use the manual backup and paste it into an LLM chat by their own choice.
-5. **The daily free quota has run out** (the review uses the same 20 requests): the summary is sent the next day.
+5. **The daily free quota has run out:** the summary has its own Google project and key, with its own 20 requests per day, so the homework review does not use them up. One summary per day is enough. If the quota still runs out, the summary is sent the next day.
 6. **The model is busy** (error 503): the system tries again, at most three times in all. After that, the window says that the summary failed, and the transcript stays.
 7. **A summary screen for students:** out of scope. The transcript and the summary stay with the lecturer.
 
