@@ -141,7 +141,7 @@ flowchart TB
     R -- "saves" --> REP
 ```
 
-**In plain words:** these two features run after the lesson, and both start from the window. Both use Gemini through the same engine interface (`ReviewEngine`), with the same manual backup.
+**In plain words:** these two features run after the lesson, and both start from the window. Both use Gemini through the same engine interface (`LlmEngine`), with the same manual backup.
 - **Summary (C15):** C15 turns the recording into text on the lecturer's computer. Before the transcript is sent, the window asks the lecturer to confirm, because the transcript may hold names and voices of students, and on the free tier Google uses the content. Only after "OK" does C15 send the transcript to Gemini and save the summary. If the lecturer does not confirm, the transcript stays on the computer.
 - **Review (C16):** C16 downloads each repository from GitHub, packs it, sends it to Gemini, and saves the reports. It never sends a name or a link, only "Repo A", "Repo B", and so on.
 
@@ -204,7 +204,7 @@ flowchart TB
 | | |
 |---|---|
 | **What it does** | It reviews a bundle, writes the class comparison, and summarizes a lesson transcript. |
-| **Talks to** | Only C15 and C16, through `ReviewEngine`, with keys from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day. The quota is per Google project, not per key. So the review and the summary use two separate projects, each with its own key and its own 20 requests per day. |
+| **Talks to** | Only C15 and C16, through `LlmEngine`, with keys from `secrets/`. The model is `gemini-4-hydrogen`, on the free tier: 20 requests per day. The quota is per Google project, not per key. So the review and the summary use two separate projects, each with its own key and its own 20 requests per day. |
 | **Note** | On the free tier, Google uses the content to improve its products. Only public repositories are sent, under anonymous names. |
 | **Requirements** | FR-10.4, FR-10.9, NFR-11 |
 | **Tested base** | `tools-tests/07-homework-review/python/gemini_review.py` |
@@ -299,8 +299,8 @@ All of these are Python classes. The lecturer uses only C6.
 
 | | |
 |---|---|
-| **What it does** | It transcribes a recording into a text file. Then it asks the lecturer, in the window, to confirm sending the transcript. After "OK", it sends the transcript through `ReviewEngine` and saves the summary next to the transcript. After "No", nothing is sent. |
-| **Built with** | faster-whisper 1.2.1, model `large-v3-turbo`, int8, on the CPU. PyAV is pinned to 18.1.1. The summary uses the same `ReviewEngine` as C16: Gemini, or the manual backup. |
+| **What it does** | It transcribes a recording into a text file. Then the window (C6) asks the lecturer to confirm sending the transcript. Only after "OK" does the window call the summary part, which sends the transcript through `LlmEngine` and saves the summary next to the transcript. After "No", the summary part is not called, and nothing is sent. The summary logic does not know the window, so it can be tested on its own. |
+| **Built with** | faster-whisper 1.2.1, model `large-v3-turbo`, int8, on the CPU. PyAV is pinned to 18.1.1. The summary uses the same `LlmEngine` as C16: Gemini, or the manual backup. |
 | **Where it runs** | On the lecturer's computer. The recording is never sent to the cloud. The transcript is sent only after the lecturer confirms. |
 | **Requirements** | FR-9.1 to FR-9.7, NFR-6, NFR-9, NFR-11 |
 | **Tested base** | `tools-tests/06-transcription/python/transcribe.py`; `tools-tests/07-homework-review/python/gemini_review.py` (the same Gemini call) |
@@ -310,7 +310,7 @@ All of these are Python classes. The lecturer uses only C6.
 | | |
 |---|---|
 | **What it does** | It reads the links file, downloads each repository, and packs it into a bundle with an anonymous name (stage 0). It reviews each bundle and saves the report with a score for each criterion (stage 1). Then it writes the ranking sheet, and asks for the class comparison (stage 2). |
-| **Parts** | `RepoBundler` packs the repositories. `ReviewEngine` is an interface with two implementations: `GeminiReviewEngine` (the main one; the model name is a parameter) and `ManualReviewEngine` (the backup, which writes the request to a file for an LLM chat). `ReviewRunner` runs the list. It tries each request at most three times, marks a submission as failed after that, and stops when the daily quota runs out, to continue the next day with the same model. |
+| **Parts** | `RepoBundler` packs the repositories. `LlmEngine` is an interface with two implementations: `GeminiLlmEngine` (the main one; the model name is a parameter) and `ManualLlmEngine` (the backup, which writes the request to a file for an LLM chat). `ReviewRunner` runs the list. It tries each request at most three times, marks a submission as failed after that, and stops when the daily quota runs out, to continue the next day with the same model. |
 | **Who runs it** | The lecturer, on the whole course. A student can run stages 0 and 1 on their own repository, with their own key. |
 | **Requirements** | FR-10.1 to FR-10.11, NFR-7, NFR-11 |
 | **Tested base** | `tools-tests/07-homework-review/python/bundle_repo.py`, `gemini_review.py`, `review_prompt.md` |
@@ -336,7 +336,7 @@ All of these are Python classes. The lecturer uses only C6.
 - **One door to the database.** Only C8 talks to Firestore from Python. This keeps the other components testable with `FakeDatabase`.
 - **Two implementations behind one interface** where an outside service may fail or change:
   - `SheetWriter`: xlsx or Google Sheets.
-  - `ReviewEngine`: Gemini or manual. Both the summary (C15) and the review (C16) use it.
+  - `LlmEngine`: Gemini or manual. Both the summary (C15) and the review (C16) use it.
   - `Database`: Firestore or fake.
 - **Private data stays local.** The photos, the recordings and the real course list stay on the lecturer's computer.
 - **Secrets stay in `secrets/`.** The service account key and the two Gemini keys (one for the review, one for the summary) are read only by C8, C12, C15 and C16, and never enter git.

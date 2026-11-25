@@ -32,7 +32,7 @@ The client stories are in the use cases ([use-cases.md](use-cases.md)). The evid
 | **Box** | A frame that the model draws around one person in the photo. Each box has a number. |
 | **Lecturer's window** | A simple desktop window in Python (tkinter) on the lecturer's computer. The lecturer runs everything from it and writes no code. |
 | **Bundle** | One text file that holds one repository: its file tree, and then its text files. |
-| **ReviewEngine** | The interface that sends a text to an LLM and returns its answer. The homework review and the lecture summary both use it. It has two implementations: Gemini (automatic, the main one) and manual (the backup). |
+| **LlmEngine** | The interface that sends a text to an LLM and returns its answer. The homework review and the lecture summary both use it. It has two implementations: Gemini (automatic, the main one) and manual (the backup). |
 
 ## 2. Overall description
 
@@ -163,7 +163,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-9.2 | Python transcribes the recording on the lecturer's computer (faster-whisper, model `large-v3-turbo`). The recording is not sent to any cloud service. |
 | FR-9.3 | The transcript is saved as a text file on the lecturer's computer. |
 | FR-9.4 | Before anything is sent, the window asks the lecturer to confirm sending the transcript. It explains why: the transcript may hold names and voices of students, and on the free tier Google uses the content to improve its products. |
-| FR-9.5 | If the lecturer confirms, the system sends the transcript through the `ReviewEngine` interface, the same as the homework review. The main implementation is the Gemini API (`gemini-4-hydrogen`). The summary is saved next to the transcript. |
+| FR-9.5 | If the lecturer confirms, the system sends the transcript through the `LlmEngine` interface, the same as the homework review. The main implementation is the Gemini API (`gemini-4-hydrogen`). The summary is saved next to the transcript. |
 | FR-9.6 | If the lecturer does not confirm, nothing is sent, and the transcript stays on the lecturer's computer. The manual engine is only a backup for when the Gemini API is not available, after the lecturer confirmed: it writes the request to a file, for the lecturer to paste into an LLM chat. |
 | FR-9.7 | The transcript and the summary stay with the lecturer. The system has no screen for sharing them. The summary uses its own Google project and key, separate from the review, because the free quota is per project, not per key. So it has its own 20 requests per day, and one summary per day is enough. It uses the same retry rule as the review: at most three tries. |
 
@@ -174,7 +174,7 @@ Each requirement has an ID. The use case column links it to the use cases docume
 | FR-10.1 | The lecturer gives a text file with one public repository link per line. |
 | FR-10.2 | Python downloads each repository and packs it into one bundle. The bundle holds the full file tree, and then the text files, most important first, up to 150,000 characters. Files that did not fit are listed at its end. |
 | FR-10.3 | Each repository gets an anonymous name: Repo A, Repo B, and so on. The key from name to link is saved only on the lecturer's computer. |
-| FR-10.4 | The review goes through the `ReviewEngine` interface. The main implementation sends each bundle with the review request to the Gemini API. The model is `gemini-4-hydrogen`, and the model name is a parameter. |
+| FR-10.4 | The review goes through the `LlmEngine` interface. The main implementation sends each bundle with the review request to the Gemini API. The model is `gemini-4-hydrogen`, and the model name is a parameter. |
 | FR-10.5 | When the daily free quota runs out, the review stops and continues the next day with the same model. The system does not switch models in the middle of a list. |
 | FR-10.6 | The backup implementation writes the request to a file, for the lecturer to paste into a free LLM chat. The answer is then saved the same way. |
 | FR-10.7 | Stage 1, one review per repository: the output is one Markdown report per link, with a score for each criterion, and one sheet that ranks all the links by score. |

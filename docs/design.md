@@ -16,7 +16,7 @@ A box is a class. Its top part is the name, the middle part is its data (fields)
 | Sign | Name | Meaning | Example in our design |
 |---|---|---|---|
 | Solid line, empty triangle | **Inheritance** | "Is a kind of": the child gets everything the parent has. | Not used. Our classes reuse code by composition and interfaces instead. |
-| Dashed line, empty triangle | **Interface realization** | "Implements": the class does what the interface promises, in its own way. | `GeminiReviewEngine` implements `ReviewEngine`. |
+| Dashed line, empty triangle | **Interface realization** | "Implements": the class does what the interface promises, in its own way. | `GeminiLlmEngine` implements `LlmEngine`. |
 | Solid line, filled diamond | **Composition** | "Is made of": the part lives only inside the whole. If the whole is deleted, so are its parts. The diamond is on the side of the whole. | A `Lesson` is made of its `CheckIn`s. |
 | Solid line, open arrow | **Association** | "Uses" or "knows": one class calls or holds the other. The word on the line says how. | `CheckInService` uses `Database`. |
 
@@ -253,19 +253,21 @@ classDiagram
     class LecturerWindow {
         +confirm(question) bool
     }
-    class ReviewEngine {
+    class LlmEngine {
         <<interface>>
         +ask(prompt, text) str
     }
     Transcriber --> Transcript : creates
-    Summarizer --> LecturerWindow : asks OK
+    LecturerWindow --> Summarizer : calls if OK
     Summarizer --> Transcript : reads
-    Summarizer --> ReviewEngine : sends if OK
+    Summarizer --> LlmEngine : sends
 ```
 
-**In plain words:** `Transcriber` turns a recording into a `Transcript`, on the lecturer's computer. `Summarizer` first asks the lecturer, through `LecturerWindow.confirm()`, whether to send it. Only if the answer is yes does it call `ReviewEngine.ask()`. It does not know whether the engine is Gemini or the manual backup: that is the point of the interface.
+**In plain words:** `Transcriber` turns a recording into a `Transcript`, on the lecturer's computer. The window (`LecturerWindow`) asks the lecturer whether to send it. Only if the lecturer confirms does the window call `Summarizer`, which calls `LlmEngine.ask()`.
 
-**Example with numbers:** a recording of 90 minutes. At 66.5 seconds of work per minute of recording, `transcribe()` takes about 100 minutes. Then `confirm()` returns `True`, and `ask()` uses 1 request from the summary project's 20 per day, leaving 19. If `confirm()` had returned `False`, `ask()` would not be called at all, and the count would stay at 20.
+Look at the direction of the arrows: the window knows `Summarizer`, but `Summarizer` does not know the window. So the logic does not depend on the screen, and a unit test can call `Summarizer` directly, with no window at all. `Summarizer` also does not know whether the engine is Gemini or the manual backup: that is the point of the interface.
+
+**Example with numbers:** a recording of 90 minutes. At 66.5 seconds of work per minute of recording, `transcribe()` takes about 100 minutes. Then `confirm()` returns `True`, the window calls `summarize()`, and `ask()` uses 1 request from the summary project's 20 per day, leaving 19. If `confirm()` had returned `False`, the window would not call `Summarizer` at all, and the count would stay at 20.
 
 ### 2.6 Homework review
 
@@ -292,7 +294,7 @@ classDiagram
         +report_md: str
         +failed: bool
     }
-    class ReviewEngine {
+    class LlmEngine {
         <<interface>>
         +ask(prompt, text) str
     }
@@ -301,14 +303,14 @@ classDiagram
     }
     ReviewRunner --> RepoBundler : packs
     RepoBundler --> Bundle : creates
-    ReviewRunner --> ReviewEngine : asks
+    ReviewRunner --> LlmEngine : asks
     ReviewRunner "1" *-- "*" Review : collects
     ReviewRunner --> SheetWriter : writes ranking
 ```
 
 **In plain words:** `ReviewRunner` goes over the links. For each link:
 1. `RepoBundler` packs the repository into a `Bundle` with an anonymous name.
-2. `ReviewRunner` sends the bundle to `ReviewEngine`, and keeps the answer as a `Review`, with a score for each criterion.
+2. `ReviewRunner` sends the bundle to `LlmEngine`, and keeps the answer as a `Review`, with a score for each criterion.
 
 Then it writes the ranking through `SheetWriter`, and asks for the class comparison. If a request fails 3 times, the `Review` is marked `failed`, and the runner goes on.
 
@@ -352,37 +354,37 @@ classDiagram
     SheetWriter <|.. GoogleSheetWriter : online
 ```
 
-**In plain words:** `Database` is the only way to reach the data. The real implementation uses Firestore with the service account key. The fake one keeps everything in a Python dictionary in memory, so the unit tests need no network and no key. `SheetWriter` writes the same rows either to a local `.xlsx` file or to a Google Sheet.
+**In plain words:** `Database` is the only way to reach the data. In the sequence diagrams, the object behind this interface appears as `DatabaseGateway` (component C8), so that it is not confused with Firestore itself: Firestore is the database in the cloud, and the gateway is the Python door to it. The real implementation uses Firestore with the service account key. The fake one keeps everything in a Python dictionary in memory, so the unit tests need no network and no key. `SheetWriter` writes the same rows either to a local `.xlsx` file or to a Google Sheet.
 
 **Example with numbers:** a unit test of `CheckInService` gives it a `FakeDatabase` with 3 check-ins: one fresh, one 40 seconds old, and one with an unknown email. The test expects 1 accepted, 1 rejected and 1 mismatch, and runs in well under a second, with no internet. In class, the same `CheckInService` gets a `FirestoreDatabase` instead, and its code does not change.
 
-**LLM: `ReviewEngine`**
+**LLM: `LlmEngine`**
 
 ```mermaid
 classDiagram
     direction TB
-    class ReviewEngine {
+    class LlmEngine {
         <<interface>>
         +ask(prompt, text) str
     }
-    class GeminiReviewEngine {
+    class GeminiLlmEngine {
         +model: str
         +key_file: str
     }
-    class ManualReviewEngine {
+    class ManualLlmEngine {
         +out_dir: str
     }
     class ReviewRunner
     class Summarizer
-    ReviewEngine <|.. GeminiReviewEngine : main
-    ReviewEngine <|.. ManualReviewEngine : backup
-    ReviewRunner --> ReviewEngine : reviews
-    Summarizer --> ReviewEngine : summarizes
+    LlmEngine <|.. GeminiLlmEngine : main
+    LlmEngine <|.. ManualLlmEngine : backup
+    ReviewRunner --> LlmEngine : reviews
+    Summarizer --> LlmEngine : summarizes
 ```
 
-**In plain words:** `ReviewEngine` has one method: send a prompt and a text, and get an answer. `GeminiReviewEngine` sends them to the Gemini API, with the model name and the key file as parameters. `ManualReviewEngine` writes the request to a file, and waits for the lecturer to paste back the answer from an LLM chat. Both the review and the summary use the interface, each with its own key file, because each has its own Google project.
+**In plain words:** `LlmEngine` has one method: send a prompt and a text, and get an answer. `GeminiLlmEngine` sends them to the Gemini API, with the model name and the key file as parameters. `ManualLlmEngine` writes the request to a file, and waits for the lecturer to paste back the answer from an LLM chat. Both the review and the summary use the interface, each with its own key file, because each has its own Google project.
 
-**Example with numbers:** the review runs with `GeminiReviewEngine(model="gemini-4-hydrogen", key_file="secrets/...")`. On a day when the API is not available, the lecturer starts it with `ManualReviewEngine` instead. `ReviewRunner` and `Summarizer` stay exactly the same: 0 lines of their code change.
+**Example with numbers:** the review runs with `GeminiLlmEngine(model="gemini-4-hydrogen", key_file="secrets/...")`. On a day when the API is not available, the lecturer starts it with `ManualLlmEngine` instead. `ReviewRunner` and `Summarizer` stay exactly the same: 0 lines of their code change.
 
 ## 3. Sequence diagrams
 
@@ -393,7 +395,7 @@ sequenceDiagram
     actor S as Student
     participant P as Phone page
     participant F as Firestore
-    participant D as Database
+    participant D as DatabaseGateway
     participant K as CheckInService
     participant C as Course
     participant W as Window
@@ -430,8 +432,9 @@ sequenceDiagram
     participant H as HeadCounter
     participant A as AttendanceService
     participant Ch as Challenge
+    participant G as DatabaseGateway
+    participant F as Firestore
     participant P as Phone pages
-    participant X as SheetWriter
     L->>W: add 3 photos
     W->>H: count(photo) × 3
     H-->>A: 30, 30, 29
@@ -439,21 +442,25 @@ sequenceDiagram
     A-->>W: mismatch alert
     L->>W: start challenge
     W->>Ch: open()
-    Ch-->>P: photo on projector only
-    P->>Ch: box numbers
+    Note over W: photo with numbered boxes,<br/>shown on the projector only
+    Ch->>G: challenge open
+    G->>F: save "open"
+    P->>F: box numbers
+    F-->>G: new answers
+    G->>Ch: answers
     L->>W: close challenge
     Ch-->>W: results lists
     L->>W: decide each case
     W->>A: decide(email, present)
-    A->>X: write_attendance(rows)
+    Note over A: then SheetWriter<br/>writes the sheet
 ```
 
 **In plain words:** the lecturer adds the photos. `HeadCounter` counts each one, and `AttendanceService` takes the highest count and compares it with the check-ins. Because they differ, the window shows an alert. The lecturer starts a challenge:
-- The photo appears only on the projector.
-- The students type box numbers on their phones.
-- The answers reach `Challenge` through the database, which is not drawn here, to keep the diagram small.
+- **The photo:** the window shows it on the projector only, with a number on each box. No arrow carries the photo anywhere: it never leaves the lecturer's computer.
+- **The phones:** `Challenge` marks the challenge as open in Firestore, so the phones show a box-number field.
+- **The answers:** the students type box numbers on their phones. The phones never talk to the lecturer's computer directly, so the answers go phone → Firestore → `DatabaseGateway` → `Challenge`.
 
-After closing, the window shows the lists. The lecturer decides each case, and the sheet is written.
+After closing, the window shows the lists. The lecturer decides each case, and then `SheetWriter` writes the sheet. It is not drawn here, to keep the diagram at eight participants.
 
 **Example with numbers:**
 
@@ -475,7 +482,7 @@ sequenceDiagram
     actor S as Student
     participant P as Phone page
     participant F as Firestore + rules
-    participant D as Database
+    participant D as DatabaseGateway
     participant M as CommentService
     participant W as Window
     participant X as SheetWriter
@@ -509,7 +516,7 @@ sequenceDiagram
     actor L as Lecturer
     participant W as Window
     participant Q as PollService
-    participant D as Database
+    participant D as DatabaseGateway
     participant F as Firestore + rules
     participant P as Phone page
     actor S as Student
@@ -539,13 +546,14 @@ sequenceDiagram
     participant W as Window
     participant T as Transcriber
     participant Su as Summarizer
-    participant E as GeminiReviewEngine
+    participant E as GeminiLlmEngine
     participant G as Gemini API
     L->>W: choose recording
     W->>T: transcribe(recording)
-    T-->>Su: transcript
-    Su->>W: confirm("Send to Gemini?")
+    T-->>W: transcript ready
+    W->>L: "Send to Gemini?"
     alt lecturer clicks OK
+        W->>Su: summarize(transcript)
         loop at most 3 tries
             Su->>E: ask(prompt, transcript)
             E->>G: request
@@ -554,13 +562,15 @@ sequenceDiagram
         E-->>Su: summary
         Su-->>W: summary saved
     else lecturer clicks No
-        Su-->>W: nothing sent
+        Note over W: Summarizer is not called,<br/>nothing is sent
     end
 ```
 
-**In plain words:** the transcriber makes a transcript on the computer. Then the summarizer asks the lecturer whether to send it:
-- **OK:** the transcript goes to Gemini, with up to 3 tries if the model is busy, and the summary is saved.
-- **No:** nothing leaves the computer.
+**In plain words:** the transcriber makes a transcript on the computer. Then the window asks the lecturer whether to send it:
+- **OK:** the window calls `Summarizer`, the transcript goes to Gemini with up to 3 tries if the model is busy, and the summary is saved.
+- **No:** the window does not call `Summarizer` at all, and nothing leaves the computer.
+
+The question is asked by the window, not by `Summarizer`. So `Summarizer` is pure logic, with no screen, and can be tested on its own.
 
 **Example with numbers:** a 90-minute recording takes about 100 minutes to transcribe. The lecturer clicks OK. The first try gets an error 503, and the second try succeeds, so 2 of the 3 tries were used. If all 3 had failed, the window would say that the summary failed, and the transcript would stay.
 
@@ -572,7 +582,7 @@ sequenceDiagram
     participant W as Window
     participant R as ReviewRunner
     participant B as RepoBundler
-    participant E as GeminiReviewEngine
+    participant E as GeminiLlmEngine
     participant G as Gemini API
     participant X as SheetWriter
     L->>W: choose links file

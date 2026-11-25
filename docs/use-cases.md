@@ -292,7 +292,7 @@ Each use case is a client story, written as "As a ... I want ... so that ...". I
 3. The system saves the transcript as a text file.
 4. The window asks: "Send the transcript to Gemini for a summary?" It explains that the transcript may hold names and voices of students, and that on the free tier Google uses the content.
 5. The lecturer clicks "OK".
-6. The system sends the transcript through `ReviewEngine` to the Gemini API, and saves the summary next to the transcript.
+6. The system sends the transcript through `LlmEngine` to the Gemini API, and saves the summary next to the transcript.
 7. The lecturer shares the summary with the students through the channel they already use, if they want to.
 
 **Edge cases:**

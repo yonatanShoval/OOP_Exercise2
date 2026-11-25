@@ -79,7 +79,7 @@ The assignment defines five features. Attendance is the main one.
 ### Feature 4: Lecture summary
 - The lecturer downloads the class recording and gives it to the system by hand.
 - The recording is transcribed on the lecturer's computer (faster-whisper).
-- The summary is automatic, through the Gemini API, with the same engine interface (`ReviewEngine`) and the same manual backup as the homework review.
+- The summary is automatic, through the Gemini API, with the same engine interface (`LlmEngine`) and the same manual backup as the homework review.
 - Before the transcript is sent, the lecturer's window asks the lecturer to confirm, because the transcript may hold names and voices of students, and on the free tier Google uses the content. If the lecturer does not confirm, the transcript stays on the lecturer's computer.
 - The transcript and the summary stay with the lecturer. The lecturer can share them through the channel they already use.
 
@@ -87,7 +87,7 @@ The assignment defines five features. Attendance is the main one.
 - The lecturer gives a text file with one repository link per line.
 - A script downloads each repository and packs it into one text file, under an anonymous name (Repo A, Repo B, and so on).
 - The review is automatic: the system sends each packed repository to the Gemini API (free tier) and saves the answer. This is the "machine" that goes through all the submissions.
-- The design has one interface, `ReviewEngine`, with two implementations:
+- The design has one interface, `LlmEngine`, with two implementations:
   - **Gemini API:** the main one, automatic. The model is `gemini-4-hydrogen`, and the model name is a parameter. When the daily free quota (20 requests) runs out, the review continues the next day with the same model, so that every submission is reviewed by the same model and the ranking stays fair.
   - **Manual:** the backup. The script prepares the request, and the lecturer pastes it into a free LLM chat.
 - The output, in two stages:
@@ -158,6 +158,6 @@ The work is done when all of the following are true:
 | The head count is slow. It took about 5.3 s per photo on a regular CPU. | The lecturer waits. | Photos are counted after they are taken, not live. |
 | The transcript has errors. In the test, the model invented words over silence and missed the first 30 seconds. | The summary can be wrong. | The lecturer checks the summary. The summary is ready about 2 hours after the lesson. |
 | The rotating QR code is forwarded to someone at home. | There is a false check-in. | The code is valid for 20 seconds only. The head count and the challenge are the real check. |
-| The Gemini free tier allows only 20 requests per day, or it changes. | A hundred submissions take about five days. | The review continues the next day with the same model. If the API is not available, the manual engine is the backup. Both use the same `ReviewEngine` interface. |
+| The Gemini free tier allows only 20 requests per day, or it changes. | A hundred submissions take about five days. | The review continues the next day with the same model. If the API is not available, the manual engine is the backup. Both use the same `LlmEngine` interface. |
 | The review misses problems or invents results. In the test, Hydrogen found 1 of 3 checked claims, in a single run. | A wrong review misleads the grader and the student. | The main model was chosen because it did not invent results. The review supports a human grader and does not replace one. |
 | The service account key leaks. | Someone gets full access to the project. | The key is kept in a folder blocked by `.gitignore`, and `git status` is checked before each commit. |
